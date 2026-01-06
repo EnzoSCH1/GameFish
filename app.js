@@ -500,8 +500,10 @@ function initBoss(){
 function updateBoss(dt){
   if (!bossActive) return;
 
-  const bossW = 520;
-  const bossH = 292;
+  const isMobile = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+const bossW = isMobile ? 380 : 520;
+const bossH = isMobile ? 213 : 292;
+
 
   const bossCenterX = bossX + bossW / 2;
   const bossCenterY = bossY + bossH / 2;

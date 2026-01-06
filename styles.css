@@ -471,6 +471,77 @@ button.secondary{ opacity: 0.9; }
   100%{ opacity: 0.35; transform: translateY(0); }
 }
 
+/* =========================================================
+   📱 MODE MOBILE COMPACT (auto)
+   ========================================================= */
+@media (hover: none) and (pointer: coarse), (max-width: 900px){
+
+  /* Curseur poisson */
+  #cursorFish{
+    width: 48px;
+    height: 48px;
+  }
+
+  /* Boss (visuel seulement) */
+  #boss{
+    width: 380px;
+    height: 213px;
+  }
+
+  /* Entités */
+  .entity.food{
+    width: 20px;
+    height: 20px;
+  }
+
+  .entity.bonus{
+    width: 26px;
+    height: 26px;
+  }
+
+  .entity.malus{
+    width: 32px;
+    height: 32px;
+  }
+
+  .entity.power-dash{
+    width: 30px;
+    height: 30px;
+  }
+
+  .entity.power-magnet{
+    width: 28px;
+    height: 28px;
+  }
+
+  /* HUD plus compact */
+  #hud{
+    min-width: unset;
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .hud-top{
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .pill{
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  /* Overlay un peu plus aéré */
+  .panel{
+    width: min(92vw, 420px);
+    padding: 14px;
+  }
+
+  .rules{
+    font-size: 0.9rem;
+    max-height: 50vh;
+  }
+}
 
 .hidden{
   display: none !important;
