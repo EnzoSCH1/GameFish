@@ -53,9 +53,6 @@ const stMaxCombo = document.getElementById("stMaxCombo");
 const LS_BEST = "sea_fish_best";
 let bestScore = Number(localStorage.getItem(LS_BEST) || "0");
 
-// ✅ LocalStorage "ne plus afficher les règles"
-const LS_SKIP_RULES = "sea_fish_skip_rules";
-
 // ====== Game state
 let running = false;
 
@@ -166,34 +163,12 @@ function hideStatsBox(){
   statsBox.classList.add("hidden");
 }
 
+// ✅ garde UNE SEULE version de hideRules (tu en avais 2)
 function hideRules(){
   if (rulesBox) rulesBox.classList.add("hidden");
 }
 
-// ✅ Checkbox "Ne plus afficher les règles"
-function ensureSkipRulesUI(){
-  if (!rulesBox) return null;
-
-  let row = document.getElementById("skipRulesRow");
-  if (!row){
-    row = document.createElement("label");
-    row.id = "skipRulesRow";
-    row.className = "skipRules";
-    row.innerHTML = `<input type="checkbox" id="skipRules"> Ne plus afficher les règles`;
-    rulesBox.appendChild(row);
-  }
-
-  const cb = document.getElementById("skipRules");
-  if (cb){
-    cb.checked = localStorage.getItem(LS_SKIP_RULES) === "1";
-    cb.onchange = () => {
-      localStorage.setItem(LS_SKIP_RULES, cb.checked ? "1" : "0");
-    };
-  }
-  return cb;
-}
-
-// ✅ Démarrage depuis l’overlay (bouton Commencer)
+// ✅ Démarrage depuis l’overlay (même logique que ton btnStart)
 async function startGameFromOverlay(){
   hideRules();
   hideOverlay();
@@ -214,31 +189,26 @@ async function startGameFromOverlay(){
   requestAnimationFrame(frame);
 }
 
-// ✅ Menu règles (début de jeu)
+// ✅ Menu règles (début de jeu) — AUTO au chargement / refresh
 function showRules(){
-  // si "ne plus afficher" est coché -> démarre direct
-  if (localStorage.getItem(LS_SKIP_RULES) === "1"){
-    startGameFromOverlay();
-    return;
-  }
-
   overlayTitle.textContent = "Bienvenue dans Sea Game 🌊";
-  overlayMsg.textContent = "Lis les règles puis clique sur Commencer.";
+  overlayMsg.textContent = "Lis les règles pour comprendre le jeu.";
 
   overlay.classList.remove("hidden");
+  overlay.classList.add("overlay-rules"); // ✅ IMPORTANT
 
   if (rulesBox) rulesBox.classList.remove("hidden");
   if (statsBox) statsBox.classList.add("hidden");
 
-  // ✅ Commencer visible, Continuer/Rejouer cachés
   if (btnPlay) btnPlay.style.display = "inline-block";
   btnNext.style.display = "none";
   btnRetry.style.display = "none";
 
-  ensureSkipRulesUI();
   setRunningUI(false);
 }
 
+
+  
 // ✅ Rendu stats (toujours à jour)
 function renderStats(){
   if (!statsBox) return;
@@ -275,9 +245,10 @@ function syncHUD(){
 function showOverlay(title, msg, mode){
   overlayTitle.textContent = title;
   overlayMsg.textContent = msg;
-  overlay.classList.remove("hidden");
 
-  // cache règles + bouton Commencer
+  overlay.classList.remove("hidden");
+  overlay.classList.remove("overlay-rules"); // ❌ enlève le mode bienvenue
+
   hideRules();
   if (btnPlay) btnPlay.style.display = "none";
 
@@ -293,6 +264,9 @@ function showOverlay(title, msg, mode){
 
   setRunningUI(false);
 }
+
+
+
 
 // ====== Parallax
 function updateParallax(){
@@ -832,11 +806,13 @@ window.addEventListener("contextmenu", (e) => {
 
 // Space = dash + Enter = commencer sur règles
 window.addEventListener("keydown", (e) => {
+  // ✅ si menu règles visible => Entrée démarre
   if (e.code === "Enter" && !overlay.classList.contains("hidden") && rulesBox && !rulesBox.classList.contains("hidden")){
     e.preventDefault();
     startGameFromOverlay();
     return;
   }
+
   if (e.code === "Space"){
     e.preventDefault();
     tryDash();
@@ -845,10 +821,12 @@ window.addEventListener("keydown", (e) => {
 
 // ====== Buttons
 
-// ✅ bouton "Commencer" (overlay)
-btnPlay.addEventListener("click", () => {
-  startGameFromOverlay();
-});
+// ✅ bouton "Commencer" (overlay) => on le cache sur les règles, mais si tu le gardes dans le HTML, il marche quand même
+if (btnPlay){
+  btnPlay.addEventListener("click", () => {
+    startGameFromOverlay();
+  });
+}
 
 btnStart.addEventListener("click", async () => {
   if (!running){
@@ -896,6 +874,7 @@ btnReset.addEventListener("click", () => {
   btnStart.textContent = "Démarrer";
   setRunningUI(false);
 
+  // ✅ au reset, on ré-affiche les règles (comme tu voulais)
   showRules();
 });
 
@@ -940,6 +919,7 @@ btnRetry.addEventListener("click", () => {
     setRunningUI(false);
     syncHUD();
 
+    // ✅ re-affiche règles quand on recommence totalement
     showRules();
     return;
   }
@@ -964,5 +944,6 @@ configureLevel();
 syncHUD();
 setRunningUI(false);
 
-// ✅ affiche les règles au lancement (ou démarre direct si option activée)
+// ✅ affiche les règles au lancement (toujours, comme tu veux)
 showRules();
+

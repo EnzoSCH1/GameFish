@@ -20,7 +20,6 @@ html, body{
 
 body{
   overflow:hidden;
-  /* IMPORTANT: curseur visible par défaut */
   cursor: default;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--text);
@@ -47,14 +46,12 @@ body.game-running{
 }
 
 .layer-mid{
-  /* couche “brume lumière” (pas besoin d’image) */
   background: radial-gradient(1200px 600px at 50% 15%, rgba(255,255,255,0.12), transparent 60%);
   mix-blend-mode: screen;
   opacity: 0.55;
 }
 
 .layer-front{
-  /* vignette + profondeur */
   background: radial-gradient(1200px 800px at 50% 50%, transparent 55%, rgba(0,0,0,0.25) 100%);
   opacity: 0.7;
 }
@@ -140,19 +137,9 @@ body.game-running{
   background-size: contain;
   background-repeat: no-repeat;
   will-change: transform;
+  animation: floatItem 3.2s ease-in-out infinite;
 }
 
-/* Nourriture – petite, fréquente */
-.entity{
-  position: absolute;
-  pointer-events: none;
-  background-position: center;
-  background-size: contain;
-  background-repeat: no-repeat;
-  will-change: transform;
-}
-
-/* Nourriture – icône bocal : très lisible, on peut la laisser assez petite */
 .entity.food{
   width: 28px;
   height: 28px;
@@ -160,7 +147,6 @@ body.game-running{
   filter: drop-shadow(0 0 6px rgba(255,255,255,0.25));
 }
 
-/* Bonus – inchangé (si tu gardes ton bonus.png précédent) */
 .entity.bonus{
   width: 34px;
   height: 34px;
@@ -168,7 +154,6 @@ body.game-running{
   filter: drop-shadow(0 0 6px rgba(180,120,255,0.6));
 }
 
-/* Malus – méduse : fine et détaillée => un peu plus grande + glow rouge */
 .entity.malus{
   width: 44px;
   height: 44px;
@@ -178,7 +163,6 @@ body.game-running{
     drop-shadow(0 0 4px rgba(0,0,0,0.25));
 }
 
-/* Power dash – corail : plus large pour être reconnaissable */
 .entity.power-dash{
   width: 42px;
   height: 42px;
@@ -188,7 +172,6 @@ body.game-running{
     drop-shadow(0 0 4px rgba(0,0,0,0.22));
 }
 
-/* Power magnet – inchangé (si tu gardes ton power_magnet.png précédent) */
 .entity.power-magnet{
   width: 34px;
   height: 34px;
@@ -196,25 +179,18 @@ body.game-running{
   filter: drop-shadow(0 0 8px rgba(120,200,255,0.7));
 }
 
-
 @keyframes floatItem{
   0%   { transform: translateY(0); }
   50%  { transform: translateY(-6px); }
   100% { transform: translateY(0); }
 }
 
-.entity{
-  animation: floatItem 3.2s ease-in-out infinite;
-}
-
-
-
 /* Boss */
 #boss{
   position: absolute;
   z-index: 8;
   width: 520px;
-  height: 292px; /* ratio 1920x1080 */
+  height: 292px;
   background: url("assets/fish/boss.png") center/contain no-repeat;
   left: -9999px;
   top: -9999px;
@@ -222,14 +198,10 @@ body.game-running{
   filter: drop-shadow(0 20px 28px rgba(0,0,0,0.45));
   transform-origin: 50% 50%;
 }
-
 #boss::before,
-#boss::after{
-  content: none;
-}
+#boss::after{ content: none; }
 
-
-/* Cursor fish (style) */
+/* Cursor fish */
 #cursorWrap{
   position:fixed; left:0; top:0;
   width:0; height:0;
@@ -247,12 +219,8 @@ body.game-running{
   filter: drop-shadow(0 10px 14px rgba(0,0,0,0.35));
   will-change: transform;
 }
-
-/* si tu avais du CSS qui dessinait un poisson en pseudo-elements */
 #cursorFish::before,
-#cursorFish::after{
-  content: none;
-}
+#cursorFish::after{ content: none; }
 
 /* Règles du jeu */
 .rules{
@@ -262,27 +230,21 @@ body.game-running{
   font-size: 0.95rem;
   line-height: 1.45;
   color: #eafcff;
+  max-height: 55vh;
+  overflow: auto;
+  padding-right: 8px;
 }
-
 .rules h3{
   margin: 14px 0 6px;
   font-size: 1.05rem;
   color: #9ee8ff;
 }
-
 .rules ul{
   padding-left: 18px;
   margin: 6px 0;
 }
-
-.rules li{
-  margin-bottom: 4px;
-}
-
-.rules b{
-  color: #ffffff;
-}
-
+.rules li{ margin-bottom: 4px; }
+.rules b{ color: #ffffff; }
 
 /* HUD */
 #hud{
@@ -341,33 +303,49 @@ button.secondary{ opacity: 0.9; }
   justify-content:center;
   background: rgba(0,0,0,0.55);
   backdrop-filter: blur(10px);
-  /* Curseur visible pour cliquer */
   cursor: default;
 }
 #overlay.hidden{ display:none; }
+
 .panel{
   width: min(460px, 92vw);
   background: rgba(5, 15, 25, 0.72);
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 18px;
   padding: 16px;
+
+  /* ✅ AJOUT: pour mettre les boutons en bas */
+  display: flex;
+  flex-direction: column;
 }
+
 #overlayTitle{ font-size: 18px; font-weight: 700; }
 #overlayMsg{ margin-top: 8px; opacity: 0.9; }
-.actions{ margin-top: 14px; display:flex; gap: 10px; }
 
+/* ✅ AJOUT: le contenu prend la place, les boutons restent en bas */
+.rules,
+.stats{
+  flex: 1;
+}
+
+.actions{
+  margin-top: 18px;
+  display:flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Stats */
 .stats{
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(255,255,255,0.12);
 }
-
 .stats-grid{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-
 .stat{
   padding: 10px 12px;
   border-radius: 14px;
@@ -377,16 +355,10 @@ button.secondary{ opacity: 0.9; }
   justify-content: space-between;
   align-items: baseline;
 }
+.stat span{ font-size: 12px; opacity: 0.85; }
+.stat b{ font-size: 14px; }
 
-.stat span{
-  font-size: 12px;
-  opacity: 0.85;
-}
-
-.stat b{
-  font-size: 14px;
-}
-
+/* Checkbox */
 .skipRules{
   display:flex;
   align-items:center;
@@ -399,7 +371,64 @@ button.secondary{ opacity: 0.9; }
 }
 .skipRules input{ transform: scale(1.15); }
 
+/* ✅ AJOUT: bouton overlay plus visible */
+.actions button{
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+.actions button#btnPlay,
+.actions button#btnNext{
+  background: rgba(120,240,255,0.18);
+  border: 1px solid rgba(120,240,255,0.35);
+  box-shadow: 0 0 14px rgba(120,240,255,0.22);
+}
+
+/* Texte d'aide (Entrée / Démarrer) */
+/* Pulse doux pour le texte d’aide */
+.overlay-hint{
+  margin-top: 10px;
+  font-size: 1rem;
+  opacity: 0.85;
+  color: #eaffff;
+  text-align: left;
+
+  animation: overlayHintPulse 1.8s ease-in-out infinite;
+}
+
+.overlay-hint b{
+  color: #7ffcff;
+  text-shadow: 0 0 6px rgba(120,240,255,0.55);
+}
+
+/* Animation */
+@keyframes overlayHintPulse{
+  0%{
+    opacity: 0.45;
+    transform: translateY(0);
+  }
+  50%{
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+  100%{
+    opacity: 0.45;
+    transform: translateY(0);
+  }
+}
+
+/* (Optionnel) si l’utilisateur préfère réduire les animations */
+@media (prefers-reduced-motion: reduce){
+  .overlay-hint{ animation: none; }
+}
+
+
+/* ❌ Caché par défaut */
+#overlay:not(.overlay-rules) .overlay-hint{
+  display: none;
+}
+
+
 .hidden{
   display: none !important;
 }
-
