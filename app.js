@@ -754,6 +754,10 @@ function maybeSpawnRandom(){
 function tryDash(){
   if (!running) return;
   if (dashCooldown > 0) return;
+  if (navigator.vibrate){
+  navigator.vibrate(20);
+}
+
 
   dashTime = dashTimeMax;
   dashCooldown = dashCooldownMax;
