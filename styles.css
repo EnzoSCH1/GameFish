@@ -1,0 +1,405 @@
+:root{
+  --hud-bg: rgba(0,0,0,0.28);
+  --hud-border: rgba(255,255,255,0.16);
+  --text: rgba(255,255,255,0.95);
+}
+
+*{ box-sizing:border-box; }
+html, body{ height:100%; margin:0; }
+
+/* Bloque la sélection de texte partout et d'image */
+*{
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Bonus: évite le highlight bleu sur mobile */
+html, body{
+  -webkit-tap-highlight-color: transparent;
+}
+
+body{
+  overflow:hidden;
+  /* IMPORTANT: curseur visible par défaut */
+  cursor: default;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text);
+  background:#001b2b;
+}
+
+/* Quand le jeu tourne, on cache le curseur normal */
+body.game-running{
+  cursor: none;
+}
+
+#scene{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+}
+
+/* Parallax layers */
+.layer{ position:absolute; inset:-60px; will-change: transform; }
+.layer-back{
+  background: url("assets/bg/back.png") center/cover no-repeat;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.layer-mid{
+  /* couche “brume lumière” (pas besoin d’image) */
+  background: radial-gradient(1200px 600px at 50% 15%, rgba(255,255,255,0.12), transparent 60%);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.layer-front{
+  /* vignette + profondeur */
+  background: radial-gradient(1200px 800px at 50% 50%, transparent 55%, rgba(0,0,0,0.25) 100%);
+  opacity: 0.7;
+}
+
+/* Caustics */
+#caustics{
+  position:absolute; inset:0;
+  pointer-events:none;
+  z-index: 4;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+.caustic{
+  position:absolute; inset:-20%;
+  background-repeat: repeat;
+  background-size: 420px 420px;
+  filter: blur(0.2px) contrast(1.15);
+  will-change: transform, opacity;
+}
+.caustic.c1{
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.22) 0 6px, transparent 7px),
+    radial-gradient(circle, rgba(255,255,255,0.16) 0 10px, transparent 11px),
+    radial-gradient(circle, rgba(255,255,255,0.12) 0 16px, transparent 17px);
+  background-position: 0 0, 120px 70px, 220px 180px;
+  animation: causticMove1 10s linear infinite;
+  opacity: 0.55;
+}
+.caustic.c2{
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.20) 0 5px, transparent 6px),
+    radial-gradient(circle, rgba(255,255,255,0.14) 0 9px, transparent 10px),
+    radial-gradient(circle, rgba(255,255,255,0.10) 0 15px, transparent 16px);
+  background-position: 60px 40px, 190px 140px, 320px 260px;
+  animation: causticMove2 14s linear infinite;
+  opacity: 0.45;
+}
+@keyframes causticMove1{
+  0%{ transform: translate3d(-2%, -1%, 0) scale(1.02) rotate(0deg); }
+  50%{ transform: translate3d(2%, 1.5%, 0) scale(1.06) rotate(1deg); }
+  100%{ transform: translate3d(-2%, -1%, 0) scale(1.02) rotate(0deg); }
+}
+@keyframes causticMove2{
+  0%{ transform: translate3d(1%, -2%, 0) scale(1.01) rotate(0deg); }
+  50%{ transform: translate3d(-2%, 2%, 0) scale(1.05) rotate(-1deg); }
+  100%{ transform: translate3d(1%, -2%, 0) scale(1.01) rotate(0deg); }
+}
+
+/* Bulles */
+#bubbles{ position:absolute; inset:0; pointer-events:none; z-index:5; }
+.bubble{
+  position:absolute; bottom:-40px;
+  border-radius:999px;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 0 12px rgba(255,255,255,0.10);
+  animation: bubbleUp linear forwards;
+}
+@keyframes bubbleUp{
+  0% { transform: translate3d(0,0,0) scale(0.9); opacity: 0.0; }
+  10%{ opacity: 0.7; }
+  100%{ transform: translate3d(var(--drift, 30px), -120vh, 0) scale(1.25); opacity: 0; }
+}
+
+/* Poissons nageurs (décor) */
+#swimmers{ position:absolute; inset:0; pointer-events:none; z-index:6; }
+.swimmer{
+  position:absolute;
+  width: 80px; height: 28px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.16);
+  filter: drop-shadow(0 10px 12px rgba(0,0,0,0.35));
+  opacity: 0.85;
+}
+
+/* Entités */
+#entities{ position:absolute; inset:0; z-index:7; }
+.entity{
+  position: absolute;
+  pointer-events: none;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  will-change: transform;
+}
+
+/* Nourriture – petite, fréquente */
+.entity{
+  position: absolute;
+  pointer-events: none;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  will-change: transform;
+}
+
+/* Nourriture – icône bocal : très lisible, on peut la laisser assez petite */
+.entity.food{
+  width: 28px;
+  height: 28px;
+  background-image: url("assets/items/food.png");
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.25));
+}
+
+/* Bonus – inchangé (si tu gardes ton bonus.png précédent) */
+.entity.bonus{
+  width: 34px;
+  height: 34px;
+  background-image: url("assets/items/bonus.png");
+  filter: drop-shadow(0 0 6px rgba(180,120,255,0.6));
+}
+
+/* Malus – méduse : fine et détaillée => un peu plus grande + glow rouge */
+.entity.malus{
+  width: 44px;
+  height: 44px;
+  background-image: url("assets/items/malus.png");
+  filter:
+    drop-shadow(0 0 10px rgba(255,80,120,0.55))
+    drop-shadow(0 0 4px rgba(0,0,0,0.25));
+}
+
+/* Power dash – corail : plus large pour être reconnaissable */
+.entity.power-dash{
+  width: 42px;
+  height: 42px;
+  background-image: url("assets/items/power_dash.png");
+  filter:
+    drop-shadow(0 0 10px rgba(255,110,110,0.55))
+    drop-shadow(0 0 4px rgba(0,0,0,0.22));
+}
+
+/* Power magnet – inchangé (si tu gardes ton power_magnet.png précédent) */
+.entity.power-magnet{
+  width: 34px;
+  height: 34px;
+  background-image: url("assets/items/power_magnet.png");
+  filter: drop-shadow(0 0 8px rgba(120,200,255,0.7));
+}
+
+
+@keyframes floatItem{
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+
+.entity{
+  animation: floatItem 3.2s ease-in-out infinite;
+}
+
+
+
+/* Boss */
+#boss{
+  position: absolute;
+  z-index: 8;
+  width: 520px;
+  height: 292px; /* ratio 1920x1080 */
+  background: url("assets/fish/boss.png") center/contain no-repeat;
+  left: -9999px;
+  top: -9999px;
+  pointer-events: none;
+  filter: drop-shadow(0 20px 28px rgba(0,0,0,0.45));
+  transform-origin: 50% 50%;
+}
+
+#boss::before,
+#boss::after{
+  content: none;
+}
+
+
+/* Cursor fish (style) */
+#cursorWrap{
+  position:fixed; left:0; top:0;
+  width:0; height:0;
+  z-index: 9999;
+  pointer-events:none;
+}
+#cursorFish{
+  position: fixed;
+  width: 72px;
+  height: 72px;
+  background: url("assets/fish/cursor.png") center/contain no-repeat;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 50;
+  filter: drop-shadow(0 10px 14px rgba(0,0,0,0.35));
+  will-change: transform;
+}
+
+/* si tu avais du CSS qui dessinait un poisson en pseudo-elements */
+#cursorFish::before,
+#cursorFish::after{
+  content: none;
+}
+
+/* Règles du jeu */
+.rules{
+  max-width: 520px;
+  text-align: left;
+  margin: 16px auto 22px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #eafcff;
+}
+
+.rules h3{
+  margin: 14px 0 6px;
+  font-size: 1.05rem;
+  color: #9ee8ff;
+}
+
+.rules ul{
+  padding-left: 18px;
+  margin: 6px 0;
+}
+
+.rules li{
+  margin-bottom: 4px;
+}
+
+.rules b{
+  color: #ffffff;
+}
+
+
+/* HUD */
+#hud{
+  position: fixed;
+  left: 14px; top: 14px;
+  z-index: 10000;
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 16px;
+  padding: 12px;
+  backdrop-filter: blur(10px);
+  min-width: 360px;
+}
+.hud-top{
+  display:flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.hud-bottom{
+  margin-top: 10px;
+  display:flex;
+  gap: 8px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+button{
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.25);
+  color: white;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+button:hover{ background: rgba(0,0,0,0.35); }
+button.secondary{ opacity: 0.9; }
+.toggle{
+  display:flex; gap:8px; align-items:center;
+  margin-left:auto; font-size: 13px; opacity: 0.95;
+}
+.pill{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.18);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.hint{ margin-top: 8px; font-size: 12px; opacity: 0.85; }
+
+/* Overlay */
+#overlay{
+  position:fixed; inset:0;
+  z-index: 20000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+  /* Curseur visible pour cliquer */
+  cursor: default;
+}
+#overlay.hidden{ display:none; }
+.panel{
+  width: min(460px, 92vw);
+  background: rgba(5, 15, 25, 0.72);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 16px;
+}
+#overlayTitle{ font-size: 18px; font-weight: 700; }
+#overlayMsg{ margin-top: 8px; opacity: 0.9; }
+.actions{ margin-top: 14px; display:flex; gap: 10px; }
+
+.stats{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat{
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.20);
+  border: 1px solid rgba(255,255,255,0.10);
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.stat span{
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.stat b{
+  font-size: 14px;
+}
+
+.skipRules{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,0.12);
+  font-size:.95rem;
+  color: rgba(234,252,255,0.92);
+}
+.skipRules input{ transform: scale(1.15); }
+
+.hidden{
+  display: none !important;
+}
+

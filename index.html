@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sea Fish Game</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="scene">
+    <div class="layer layer-back" data-depth="0.05"></div>
+    <div class="layer layer-mid" data-depth="0.12"></div>
+    <div class="layer layer-front" data-depth="0.22"></div>
+
+    <div id="caustics">
+      <div class="caustic c1"></div>
+      <div class="caustic c2"></div>
+    </div>
+
+    <div id="bubbles"></div>
+    <div id="swimmers"></div>
+
+    <!-- entités: food/bonus/malus/powerups + boss -->
+    <div id="entities"></div>
+    <div id="boss"></div>
+  </div>
+
+  <!-- Curseur poisson (visible tout le temps) -->
+  <div id="cursorWrap"><div id="cursorFish"></div></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div>Niveau : <b id="level">1</b></div>
+      <div>Objectif : <b id="score">0</b> / <b id="target">15</b></div>
+      <div>Temps : <b id="time">30.0</b>s</div>
+      <div>Combo : <b id="combo">x1</b></div>
+      <div>Total : <b id="total">0</b></div>
+      <div>Best : <b id="best">0</b></div>
+    </div>
+
+    <div class="hud-bottom">
+      <button id="btnStart">Démarrer</button>
+      <button id="btnReset" class="secondary">Recommencer</button>
+
+      <div class="pill">Dash: <b id="dash">prêt</b></div>
+      <div class="pill">Aimant: <b id="magnet">off</b></div>
+
+      <label class="toggle">
+        <input type="checkbox" id="soundToggle" checked />
+        <span>Son</span>
+      </label>
+    </div>
+
+    <div class="hint">
+      Déplace la souris • Espace / clic droit = Dash • Attrape l’aimant (bleu) • Évite le boss !
+    </div>
+  </div>
+
+<div id="overlay" class="hidden">
+  <div class="panel">
+    <div id="overlayTitle">Bienvenue dans Sea Game 🌊</div>
+    <div id="overlayMsg">Lis les règles puis clique sur Démarrer.</div>
+
+    <!-- 📘 RÈGLES DU JEU (affichées au lancement) -->
+    <div id="rules" class="rules hidden">
+      <h3>🐟 Objectif</h3>
+      <p>
+        Mange les nourritures pour atteindre l’objectif du niveau
+        avant la fin du temps.
+      </p>
+
+      <h3>🕹️ Contrôles</h3>
+      <ul>
+        <li><b>Souris</b> : déplacer le poisson</li>
+        <li><b>Espace</b> ou <b>clic droit</b> : dash</li>
+      </ul>
+
+      <h3>🍽️ Éléments</h3>
+      <ul>
+        <li>🥫 <b>Nourriture</b> : augmente le score</li>
+        <li>✨ <b>Bonus</b> : temps ou points supplémentaires</li>
+        <li>⚠️ <b>Malus (méduse)</b> : pénalité de temps</li>
+        <li>🌊 <b>Power Dash</b> : dash plus fréquent</li>
+        <li>🧲 <b>Power Aimant</b> : attire la nourriture</li>
+      </ul>
+
+      <h3>🦈 Danger</h3>
+      <p>
+        À partir du niveau 4, un boss te poursuit.
+        Évite-le ou tu perdras du temps !
+      </p>
+    </div>
+
+    <!-- 📊 STATS (uniquement fin de run) -->
+    <div id="stats" class="stats hidden">
+      <div class="stats-grid">
+        <div class="stat"><span>Total</span><b id="stTotal">0</b></div>
+        <div class="stat"><span>Best</span><b id="stBest">0</b></div>
+        <div class="stat"><span>Niveau atteint</span><b id="stLevel">1</b></div>
+        <div class="stat"><span>Nourritures</span><b id="stFood">0</b></div>
+        <div class="stat"><span>Bonus</span><b id="stBonus">0</b></div>
+        <div class="stat"><span>Malus</span><b id="stMalus">0</b></div>
+        <div class="stat"><span>Power-ups</span><b id="stPower">0</b></div>
+        <div class="stat"><span>Coups boss</span><b id="stBossHits">0</b></div>
+        <div class="stat"><span>Meilleur combo</span><b id="stMaxCombo">x1</b></div>
+      </div>
+    </div>
+
+    <!-- Flash rouge dégâts -->
+    <div id="damageFlash"></div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="btnPlay">Commencer</button>
+      <button id="btnNext">Continuer</button>
+      <button id="btnRetry" class="secondary">Rejouer</button>
+    </div>
+  </div>
+</div>
+
+
+
+  <script src="app.js"></script>
+</body>
+</html>
