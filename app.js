@@ -604,6 +604,10 @@ function createSwimmer(){
   const el = document.createElement("div");
   el.className = "swimmer";
 
+  // ✅ choisit une image aléatoire
+  const variant = Math.random() < 0.5 ? "swimmer1" : "swimmer2";
+  el.style.backgroundImage = `url("assets/fish/${variant}.png")`;
+
   const fromLeft = Math.random() > 0.5;
   const y = 80 + Math.random() * (window.innerHeight - 160);
   const dur = (10 + Math.random() * 8) / (0.9 + speed * 0.25);
@@ -643,6 +647,7 @@ function swimmersLoop(){
   const rate = Math.max(700, 2400 - level * 140);
   setTimeout(swimmersLoop, rate);
 }
+
 
 // ====== Bulles
 function spawnBubble(){
