@@ -5,7 +5,15 @@
 }
 
 *{ box-sizing:border-box; }
-html, body{ height:100%; margin:0; }
+html, body{
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+#scene{
+  touch-action: none; /* empêche le scroll/zoom pendant le drag */
+}
+
 
 /* Bloque la sélection de texte partout et d'image */
 *{
@@ -222,6 +230,25 @@ body.game-running{
 #cursorFish::before,
 #cursorFish::after{ content: none; }
 
+/* Bouton Dash mobile */
+.dash-mobile{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 25000;
+  padding: 14px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+/* Visible seulement sur appareils tactiles */
+@media (hover: none) and (pointer: coarse){
+  .dash-mobile{ display: inline-flex !important; }
+  .dash-mobile.hidden{ display: inline-flex !important; } /* force l'affichage */
+}
+
+
 /* Règles du jeu */
 .rules{
   max-width: 520px;
@@ -417,15 +444,31 @@ button.secondary{ opacity: 0.9; }
   }
 }
 
-/* (Optionnel) si l’utilisateur préfère réduire les animations */
-@media (prefers-reduced-motion: reduce){
-  .overlay-hint{ animation: none; }
+/* Hint visible UNIQUEMENT sur le menu Bienvenue (overlay-rules) */
+#overlay:not(.overlay-rules) .overlay-hint{
+  display: none !important;
 }
 
+/* Texte d'aide (Entrée / Démarrer) + animation douce */
+.overlay-hint{
+  margin-top: 10px;
+  opacity: 0.9;
+  text-align: center;
+  font-size: 1.05rem;
+  letter-spacing: .4px;
 
-/* ❌ Caché par défaut */
-#overlay:not(.overlay-rules) .overlay-hint{
-  display: none;
+  animation: hintPulse 1.6s ease-in-out infinite;
+}
+
+.overlay-hint b{
+  color: #7ffcff;
+  text-shadow: 0 0 6px rgba(120,240,255,0.8);
+}
+
+@keyframes hintPulse{
+  0%{ opacity: 0.35; transform: translateY(0); }
+  50%{ opacity: 1; transform: translateY(-2px); }
+  100%{ opacity: 0.35; transform: translateY(0); }
 }
 
 

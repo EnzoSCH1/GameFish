@@ -804,6 +804,23 @@ window.addEventListener("contextmenu", (e) => {
   tryDash();
 });
 
+// ✅ Mobile/Tablette : déplacement au doigt (en plus de la souris)
+window.addEventListener("pointermove", (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+}, { passive: true });
+
+// ✅ Mobile dash button
+const btnDashMobile = document.getElementById("btnDashMobile");
+
+if (btnDashMobile){
+  btnDashMobile.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    tryDash();
+  });
+}
+
+
 // Space = dash + Enter = commencer sur règles
 window.addEventListener("keydown", (e) => {
   // ✅ si menu règles visible => Entrée démarre
