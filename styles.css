@@ -474,6 +474,79 @@ button.secondary{ opacity: 0.9; }
   100%{ opacity: 0.35; transform: translateY(0); }
 }
 
+/* =========================
+   UPGRADES (menu après win)
+========================= */
+.upgrades{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.upgrades h3{
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: #9ee8ff;
+}
+
+.upgrades-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.upgrade-card{
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+  cursor: pointer;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+
+.upgrade-card:hover{
+  transform: translateY(-1px);
+  background: rgba(0,0,0,0.30);
+  border-color: rgba(160,240,255,0.28);
+}
+
+.u-title{
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+
+.u-desc{
+  margin-top: 4px;
+  opacity: .9;
+  font-size: .92rem;
+}
+
+.u-level{
+  margin-top: 8px;
+  opacity: .9;
+  font-size: .9rem;
+}
+
+.u-footer{
+  margin-top: 10px;
+  opacity: .9;
+  font-size: .95rem;
+}
+
+/* Sur écrans larges: 3 colonnes */
+@media (min-width: 700px){
+  .upgrades-grid{
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .upgrade-card{
+    height: 130px;
+  }
+}
+
+
+
 /* =========================================================
    📱 MODE MOBILE COMPACT (auto)
    ========================================================= */
