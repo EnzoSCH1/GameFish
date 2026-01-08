@@ -1,4 +1,10 @@
-// ====== DOM
+// =========================
+// Sea Fish Game - app.js
+// (4 upgrades random + rarity + reroll progressive)
+// XP + upgrades = RUN ONLY (reset on lose)
+// =========================
+
+// ---------- DOM ----------
 const layers = [...document.querySelectorAll(".layer")];
 const bubblesEl = document.getElementById("bubbles");
 const swimmersEl = document.getElementById("swimmers");
@@ -7,41 +13,34 @@ const entitiesEl = document.getElementById("entities");
 const bossEl = document.getElementById("boss");
 const cursorFish = document.getElementById("cursorFish");
 
-// ✅ hitboxes
-const playerRadius = 28;
-const bossRadius = 95;
-
-const levelEl = document.getElementById("level");
-const scoreEl = document.getElementById("score");
+const levelEl  = document.getElementById("level");
+const scoreEl  = document.getElementById("score");
 const targetEl = document.getElementById("target");
-const timeEl = document.getElementById("time");
-const comboEl = document.getElementById("combo");
+const timeEl   = document.getElementById("time");
+const comboEl  = document.getElementById("combo");
 
 const totalEl = document.getElementById("total");
-const bestEl = document.getElementById("best");
+const bestEl  = document.getElementById("best");
 
-const dashEl = document.getElementById("dash");
+const dashEl   = document.getElementById("dash");
 const magnetEl = document.getElementById("magnet");
 
-const btnPlay = document.getElementById("btnPlay"); // ✅ Commencer (overlay)
-const btnStart = document.getElementById("btnStart"); // HUD
+const btnPlay  = document.getElementById("btnPlay");
+const btnStart = document.getElementById("btnStart");
 const btnReset = document.getElementById("btnReset");
+const btnNext  = document.getElementById("btnNext");
+const btnRetry = document.getElementById("btnRetry");
+
 const soundToggle = document.getElementById("soundToggle");
 
 const overlay = document.getElementById("overlay");
 const overlayTitle = document.getElementById("overlayTitle");
 const overlayMsg = document.getElementById("overlayMsg");
-const btnNext = document.getElementById("btnNext");
-const btnRetry = document.getElementById("btnRetry");
-
-// ✅ Rules box dans l'overlay
 const rulesBox = document.getElementById("rules");
-
-// ✅ Actions container (Commencer / Continuer / Rejouer)
+const statsBox = document.getElementById("stats");
 const actionsEl = overlay ? overlay.querySelector(".actions") : null;
 
-// ====== STATS UI
-const statsBox = document.getElementById("stats");
+// stats fields
 const stTotal = document.getElementById("stTotal");
 const stBest = document.getElementById("stBest");
 const stLevel = document.getElementById("stLevel");
@@ -52,44 +51,72 @@ const stPower = document.getElementById("stPower");
 const stBossHits = document.getElementById("stBossHits");
 const stMaxCombo = document.getElementById("stMaxCombo");
 
-// ====== Upgrades UI
+// upgrades UI
 const upgradesBox = document.getElementById("upgrades");
 const xpTotalUI = document.getElementById("xpTotalUI");
+const btnReroll = document.getElementById("btnReroll");
 
-const upSpeedBtn = document.getElementById("upSpeedBtn");
-const upRadiusBtn = document.getElementById("upRadiusBtn");
-const upDashBtn = document.getElementById("upDashBtn");
+// 4 cartes = 4 premiers .upgrade-card
+const upgradeCards = upgradesBox
+  ? [...upgradesBox.querySelectorAll(".upgrade-card")].slice(0, 4)
+  : [];
 
-const upSpeedLv = document.getElementById("upSpeedLv");
+// levels display (facultatif dans ton HTML)
+const upSpeedLv  = document.getElementById("upSpeedLv");
 const upRadiusLv = document.getElementById("upRadiusLv");
-const upDashLv = document.getElementById("upDashLv");
+const upDashLv   = document.getElementById("upDashLv");
 
-// ====== LocalStorage (only BEST stays persistent)
+// ---------- Constants ----------
 const LS_BEST = "sea_fish_best";
 let bestScore = Number(localStorage.getItem(LS_BEST) || "0");
 
-// ====== Run Progress (XP + Upgrades) — reset à chaque manche
+// Hitboxes
+const playerRadiusBase = 28;
+
+// Combo
+const comboWindowMs = 650;
+
+// Magnet
+const magnetMax = 6.0;
+const magnetRadius = 170;
+const magnetPull = 14;
+
+// Dash
+const dashTimeMax = 0.25;
+
+// Boss
+const bossRadius = 95;
+
+// ---------- RUN ONLY PROGRESS ----------
 let runXP = 0;
-
-let runUpSpeed = 0;   // 0..5
-let runUpRadius = 0;  // 0..5
-let runUpDash = 0;    // 0..4
-
-// ✅ empêche double choix pendant la victoire (1 upgrade par niveau)
+let runUpSpeed = 0;    // infinite (soft-capped in effect)
+let runUpRadius = 0;   // infinite (soft-capped in effect)
+let runUpDash = 0;     // infinite (soft-capped in effect)
 let upgradeChosenThisWin = false;
 
-function resetRunProgress(){
-  runXP = 0;
-  runUpSpeed = 0;
-  runUpRadius = 0;
-  runUpDash = 0;
+// Reroll (MUST be declared before any use)
+let rerollCount = 0;
+const REROLL_BASE_COST = 5;
+const REROLL_STEP = 2; // +2 XP each reroll on same win screen
 
-  upgradeChosenThisWin = false;
-  hideUpgradesBox();
-  renderUpgradeButtons();
-}
+// Rarity table
+const RARITIES = [
+  { key:"common",    label:"⚪ Commun",     w: 65, costMul: 1.0, effect: 1 },
+  { key:"rare",      label:"🔵 Rare",       w: 20, costMul: 1.5, effect: 2 },
+  { key:"epic",      label:"🟣 Épique",     w: 10, costMul: 2.0, effect: 3 },
+  { key:"legendary", label:"🟡 Légendaire", w: 3,  costMul: 3.0, effect: 5 },
+];
 
-// ====== Game state
+const UPGRADE_TYPES = [
+  { key:"speed",  title:"⚡ Vitesse", desc:"Ton poisson suit plus vite.", base: 5, step: 1 },
+  { key:"radius", title:"🥫 Portée",  desc:"Mange plus facilement.",      base: 6, step: 1 },
+  { key:"dash",   title:"🌊 Dash",    desc:"Dash plus fréquent.",         base: 7, step: 2 },
+];
+
+// 4 offers shown on win
+let currentOffers = [];
+
+// ---------- GAME STATE ----------
 let running = false;
 
 let level = 1;
@@ -102,17 +129,16 @@ let timeLeft = 30.0;
 let speed = 1.0;
 let totalScore = 0;
 
-// combo
+// Combo state
 let combo = 1;
 let lastEatAt = 0;
-const comboWindowMs = 650;
 
-// souris + lissage
+// Cursor smoothing
 let mouseX = window.innerWidth / 2;
 let mouseY = window.innerHeight / 2;
 let x = mouseX, y = mouseY;
 
-// ====== Stats run (fin de run)
+// Run stats
 let eatenFood = 0;
 let takenBonus = 0;
 let takenMalus = 0;
@@ -120,32 +146,27 @@ let takenPower = 0;
 let bossHits = 0;
 let maxCombo = 1;
 
-// ====== Power-ups
+// Power-up state
 let dashCooldown = 0;
 let dashCooldownMax = 3.0;
 let dashTime = 0;
-const dashTimeMax = 0.25;
 
 let magnetTime = 0;
-const magnetMax = 6.0;
-const magnetRadius = 170;
-const magnetPull = 14;
 
-// ====== Boss
+// Boss movement state
 let bossActive = false;
 let bossX = -9999, bossY = -9999;
-
-let bossSpeed = 170;
+let bossSpeed = 200;
 let bossVX = 0, bossVY = 0;
-let bossMaxAccel = 520;
-
+let bossMaxAccel = 550;
 let lastBossHitAt = 0;
 
-// ====== Confettis bulles
+// Confetti bubbles flag
 let confettiBurstActive = false;
 
-// ====== Audio (WebAudio)
+// ---------- Audio ----------
 let audioCtx = null;
+
 function ensureAudio() {
   if (!soundToggle?.checked) return null;
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -180,13 +201,13 @@ const playBonus = () => blip({from:740, to:980, dur:0.10, gain:0.07, type:"trian
 const playOuch  = () => blip({from:220, to:90,  dur:0.16, gain:0.10, type:"sawtooth"});
 const playDash  = () => blip({from:420, to:760, dur:0.09, gain:0.07, type:"square"});
 
-// ====== UI helpers
+// ---------- UI Helpers ----------
 function setRunningUI(isRunning){
   document.body.classList.toggle("game-running", isRunning);
 }
 
 function hideOverlay(){
-  overlay.classList.add("hidden");
+  overlay?.classList.add("hidden");
 }
 
 function showStatsBox(){
@@ -209,7 +230,6 @@ function showOverlayActions(){
   actionsEl?.classList.remove("hidden");
 }
 
-// ====== Upgrades helpers
 function showUpgradesBox(){
   upgradesBox?.classList.remove("hidden");
 }
@@ -222,152 +242,28 @@ function canBuy(cost){
   return runXP >= cost;
 }
 
-// ✅ Version UNIQUE (ton HTML actuel)
-function renderUpgradeButtons(){
-  if (!upgradesBox) return;
+// ---------- RUN RESET ----------
+function resetRunProgress(){
+  runXP = 0;
+  runUpSpeed = 0;
+  runUpRadius = 0;
+  runUpDash = 0;
 
-  if (xpTotalUI) xpTotalUI.textContent = runXP;
-
-  if (upSpeedLv) upSpeedLv.textContent = runUpSpeed;
-  if (upRadiusLv) upRadiusLv.textContent = runUpRadius;
-  if (upDashLv) upDashLv.textContent = runUpDash;
-
-  const costSpeed = 8;
-  const costRadius = 10;
-  const costDash = 12;
-
-  const speedLocked = runUpSpeed >= 5;
-  const radiusLocked = runUpRadius >= 5;
-  const dashLocked = runUpDash >= 4;
-
-  if (upSpeedBtn)  upSpeedBtn.disabled  = upgradeChosenThisWin || speedLocked  || !canBuy(costSpeed);
-  if (upRadiusBtn) upRadiusBtn.disabled = upgradeChosenThisWin || radiusLocked || !canBuy(costRadius);
-  if (upDashBtn)   upDashBtn.disabled   = upgradeChosenThisWin || dashLocked   || !canBuy(costDash);
-
-  if (!renderUpgradeButtons._bound){
-    if (upSpeedBtn){
-      upSpeedBtn.addEventListener("click", () => {
-        if (upSpeedBtn.disabled) return;
-        applyUpgrade("speed", costSpeed);
-      });
-    }
-    if (upRadiusBtn){
-      upRadiusBtn.addEventListener("click", () => {
-        if (upRadiusBtn.disabled) return;
-        applyUpgrade("radius", costRadius);
-      });
-    }
-    if (upDashBtn){
-      upDashBtn.addEventListener("click", () => {
-        if (upDashBtn.disabled) return;
-        applyUpgrade("dash", costDash);
-      });
-    }
-    renderUpgradeButtons._bound = true;
-  }
-}
-
-function applyUpgrade(key, cost){
-  if (upgradeChosenThisWin) return;
-  if (!canBuy(cost)) return;
-
-  runXP = Math.max(0, runXP - cost);
-
-  if (key === "speed")  runUpSpeed  = Math.min(5, runUpSpeed + 1);
-  if (key === "radius") runUpRadius = Math.min(5, runUpRadius + 1);
-  if (key === "dash")   runUpDash   = Math.min(4, runUpDash + 1);
-
-  upgradeChosenThisWin = true;
-
-  dashCooldownMax = Math.max(1.5, 3.0 - runUpDash * 0.25);
-
-  hideUpgradesBox();
-  showOverlayActions();
-
-  if (btnNext) btnNext.disabled = false;
-
-  // ✅ relance direct le niveau suivant (sans cliquer sur Continuer)
-  hideOverlay();
-  hideStatsBox();
-
-  level++;
-  configureLevel();
-
-  running = true;
-  btnStart.textContent = "Pause";
-  setRunningUI(true);
-
-  lastFrame = 0;
-  bubbleLoop();
-  swimmersLoop();
-  requestAnimationFrame(frame);
-
-  return;
-
-  renderUpgradeButtons();
-}
-
-// ✅ Démarrage depuis l’overlay
-async function startGameFromOverlay(){
-  // ✅ nouvelle manche
-  resetRunProgress();
-
-  hideRules();
-  hideOverlay();
-  hideStatsBox();
-  hideUpgradesBox();
-
-  running = true;
-  btnStart.textContent = "Pause";
-  setRunningUI(true);
-
-  if (soundToggle.checked){
-    const ctx = ensureAudio();
-    if (ctx && ctx.state === "suspended") await ctx.resume();
-  }
-
-  lastFrame = 0;
-  bubbleLoop();
-  swimmersLoop();
-  requestAnimationFrame(frame);
-}
-
-// ✅ Menu règles (début de jeu)
-function showRules(){
-  // ✅ écran d'accueil => run à zéro
-  resetRunProgress();
-
-  overlayTitle.textContent = "Bienvenue dans Sea Game 🌊";
-  overlayMsg.textContent = "Lis les règles pour comprendre le jeu.";
-
-  overlay.classList.remove("hidden");
-  overlay.classList.add("overlay-rules");
-
-  rulesBox?.classList.remove("hidden");
-  statsBox?.classList.add("hidden");
-
-  if (btnPlay) btnPlay.style.display = "inline-block";
-  btnNext.style.display = "none";
-  btnRetry.style.display = "none";
-
-  // important
-  btnNext.disabled = false;
   upgradeChosenThisWin = false;
+  rerollCount = 0;
+  currentOffers = [];
 
   hideUpgradesBox();
-  showOverlayActions();
-
-  setRunningUI(false);
+  updateRerollButton();
+  renderOffers(); // safe even if no offers
 }
 
-// ✅ Rendu stats
+// ---------- Stats Render ----------
 function renderStats(){
   if (!statsBox) return;
-
   stTotal.textContent = totalScore;
   stBest.textContent = bestScore;
   stLevel.textContent = level;
-
   stFood.textContent = eatenFood;
   stBonus.textContent = takenBonus;
   stMalus.textContent = takenMalus;
@@ -392,7 +288,33 @@ function syncHUD(){
   renderStats();
 }
 
-// ✅ Overlay win/lose
+// ---------- Rules Screen ----------
+function showRules(){
+  resetRunProgress();
+
+  overlayTitle.textContent = "Bienvenue dans Sea Fish Game 🌊";
+  overlayMsg.textContent = "Lis les règles puis clique sur Démarrer.";
+
+  overlay.classList.remove("hidden");
+  overlay.classList.add("overlay-rules");
+
+  rulesBox?.classList.remove("hidden");
+  statsBox?.classList.add("hidden");
+
+  if (btnPlay) {
+    btnPlay.style.display = "inline-block";
+    btnPlay.textContent = "Démarrer";
+  }
+
+  btnNext.style.display = "none";
+  btnRetry.style.display = "none";
+
+  hideUpgradesBox();
+  showOverlayActions();
+  setRunningUI(false);
+}
+
+// ---------- Overlay ----------
 function showOverlay(title, msg, mode){
   overlayTitle.textContent = title;
   overlayMsg.textContent = msg;
@@ -406,29 +328,227 @@ function showOverlay(title, msg, mode){
   hideUpgradesBox();
   showOverlayActions();
 
-  if (mode === "win") {
-    btnNext.style.display = "inline-block";
-    btnRetry.style.display = "inline-block";
-    btnRetry.textContent = "Recommencer";
-
-    btnNext.disabled = true;
+  if (mode === "win"){
+    // prepare offers + reroll
     upgradeChosenThisWin = false;
+    rerollCount = 0;
+
+    rollOffers();
+    renderOffers();
 
     showUpgradesBox();
     hideOverlayActions();
-    renderUpgradeButtons();
+
+    // no need "Continuer" button
+    btnNext.style.display = "none";
+
+    btnRetry.style.display = "inline-block";
+    btnRetry.textContent = "Recommencer";
   } else {
+    // lose
     btnNext.style.display = "none";
     btnRetry.style.display = "inline-block";
     btnRetry.textContent = "Rejouer";
-    btnNext.disabled = false;
-    upgradeChosenThisWin = false;
+
+    hideUpgradesBox();
+    showOverlayActions();
   }
 
   setRunningUI(false);
 }
 
-// ====== Parallax
+// ---------- Rarity / Offers / Reroll ----------
+function pickRarity(){
+  // ✅ early game: seulement Commun/Rare
+  if (level <= 5) {
+    return Math.random() < 0.75 ? RARITIES[0] : RARITIES[1]; // 75% common, 25% rare
+  }
+
+  // mid game: commun/rare/épique
+  if (level <= 12) {
+    const roll = Math.random();
+    if (roll < 0.60) return RARITIES[0];
+    if (roll < 0.92) return RARITIES[1];
+    return RARITIES[2];
+  }
+
+  // late game: tout possible
+  const total = RARITIES.reduce((s,r)=>s+r.w,0);
+  let x = Math.random() * total;
+  for (const r of RARITIES){
+    x -= r.w;
+    if (x <= 0) return r;
+  }
+  return RARITIES[0];
+}
+
+
+function getTypeLevel(type){
+  if (type === "speed") return runUpSpeed;
+  if (type === "radius") return runUpRadius;
+  if (type === "dash") return runUpDash;
+  return 0;
+}
+
+function isTypeUseful(type){
+  // soft caps for offers
+  if (type === "speed"){
+    const follow = Math.min(0.78, 0.18 + runUpSpeed * 0.015);
+    return follow < 0.78 - 1e-6;
+  }
+  if (type === "radius"){
+    const bonus = Math.min(80, runUpRadius * 4);
+    return bonus < 80 - 1e-6;
+  }
+  if (type === "dash"){
+    const cd = Math.max(0.6, 3.0 - runUpDash * 0.12);
+    return cd > 0.6 + 1e-6;
+  }
+  return true;
+}
+
+function computeCost(type, rarity){
+  const u = UPGRADE_TYPES.find(x=>x.key===type);
+  const lvl = Math.floor(getTypeLevel(type));
+  const raw = u.base + lvl * u.step;
+  return Math.max(1, Math.ceil(raw * rarity.costMul));
+}
+
+function rollOffers(){
+  const want = 4;
+  const offers = [];
+  const used = new Set();
+
+  let safety = 0;
+  while (offers.length < want && safety++ < 200){
+    const rarity = pickRarity();
+    const type = UPGRADE_TYPES[Math.floor(Math.random() * UPGRADE_TYPES.length)].key;
+
+    if (!isTypeUseful(type)) continue;
+
+    const sig = type + ":" + rarity.key;
+    if (used.has(sig)) continue;
+    used.add(sig);
+
+    const cost = computeCost(type, rarity);
+    offers.push({ type, rarity, cost });
+  }
+
+  while (offers.length < want){
+    const rarity = RARITIES[0];
+    const type = UPGRADE_TYPES[Math.floor(Math.random() * UPGRADE_TYPES.length)].key;
+    offers.push({ type, rarity, cost: computeCost(type, rarity) });
+  }
+
+  currentOffers = offers;
+}
+
+function updateRerollButton(){
+  if (!btnReroll) return;
+  const cost = REROLL_BASE_COST + rerollCount * REROLL_STEP;
+  btnReroll.textContent = `Reroll (${cost} XP)`;
+  btnReroll.disabled = upgradeChosenThisWin || runXP < cost;
+}
+
+function doReroll(){
+  if (upgradeChosenThisWin) return;
+  const cost = REROLL_BASE_COST + rerollCount * REROLL_STEP;
+  if (runXP < cost) return;
+
+  runXP -= cost;
+  rerollCount++;
+
+  rollOffers();
+  renderOffers();
+  updateRerollButton();
+}
+
+function renderOffers(){
+  if (xpTotalUI) xpTotalUI.textContent = runXP;
+
+  // show levels (optional labels)
+  if (upSpeedLv) upSpeedLv.textContent = Math.floor(runUpSpeed);
+  if (upRadiusLv) upRadiusLv.textContent = Math.floor(runUpRadius);
+  if (upDashLv) upDashLv.textContent = Math.floor(runUpDash);
+
+  if (!upgradeCards || upgradeCards.length === 0) return;
+
+  upgradeCards.forEach((btn, i) => {
+    const offer = currentOffers[i];
+    if (!btn || !offer) return;
+
+    const u = UPGRADE_TYPES.find(x=>x.key===offer.type);
+    const can = !upgradeChosenThisWin && runXP >= offer.cost;
+
+    btn.disabled = !can;
+    btn.style.opacity = btn.disabled ? "0.55" : "1";
+
+     // ✅ applique la rareté pour le CSS
+  btn.dataset.rarity = offer.rarity.key;
+  btn.classList.remove("rarity-common","rarity-rare","rarity-epic","rarity-legendary");
+  btn.classList.add(`rarity-${offer.rarity.key}`);
+
+    btn.innerHTML = `
+      <div class="u-title">${u.title} <span style="opacity:.85">${offer.rarity.label}</span></div>
+      <div class="u-desc">${u.desc}</div>
+      <div class="u-level" style="margin-top:8px;opacity:.9">
+        Coût: <b>${offer.cost}</b> XP • +<b>${offer.rarity.effect}</b>
+      </div>
+    `;
+
+    btn.onclick = () => {
+      if (btn.disabled) return;
+      applyOffer(offer);
+    };
+  });
+
+  updateRerollButton();
+}
+
+function applyOffer(offer){
+  if (upgradeChosenThisWin) return;
+  if (runXP < offer.cost) return;
+
+  runXP -= offer.cost;
+
+  if (offer.type === "speed")  runUpSpeed  += offer.rarity.effect;
+  if (offer.type === "radius") runUpRadius += offer.rarity.effect;
+  if (offer.type === "dash")   runUpDash   += offer.rarity.effect;
+
+  // soft caps
+  runUpSpeed = Math.min(runUpSpeed, 60);
+  runUpRadius = Math.min(runUpRadius, 25);
+  runUpDash = Math.min(runUpDash, 25);
+
+  upgradeChosenThisWin = true;
+
+  // apply dash cooldown immediately
+  dashCooldownMax = Math.max(0.6, 3.0 - runUpDash * 0.12);
+
+  // continue directly to next level
+  hideUpgradesBox();
+  hideOverlay();
+  hideStatsBox();
+
+  level++;
+  configureLevel();
+
+  running = true;
+  btnStart.textContent = "Pause";
+  setRunningUI(true);
+
+  lastFrame = 0;
+  bubbleLoop();
+  swimmersLoop();
+  requestAnimationFrame(frame);
+}
+
+// bind reroll
+if (btnReroll){
+  btnReroll.addEventListener("click", doReroll);
+}
+
+// ---------- Parallax ----------
 function updateParallax(){
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;
@@ -443,10 +563,10 @@ function updateParallax(){
   });
 }
 
-// ====== Cursor follow
+// ---------- Cursor follow ----------
 function updateCursor(){
   const baseFollow = dashTime > 0 ? 0.42 : 0.18;
-  const follow = Math.min(0.65, baseFollow + runUpSpeed * 0.02);
+  const follow = Math.min(0.78, baseFollow + runUpSpeed * 0.015);
 
   const prevX = x;
   const prevY = y;
@@ -465,7 +585,7 @@ function updateCursor(){
     `translate(-50%, -50%) translate(${x}px, ${y}px) scaleX(${updateCursor.facing}) rotate(${tilt}deg)`;
 }
 
-// ====== Entities
+// ---------- Entities spawn ----------
 function createEntity(kind, px, py){
   const el = document.createElement("div");
   el.className = `entity ${kind}`;
@@ -515,7 +635,7 @@ function spawnPowerUp(){
   );
 }
 
-// ====== Magnet effect
+// ---------- Magnet ----------
 function applyMagnet(){
   if (magnetTime <= 0) return;
 
@@ -543,7 +663,7 @@ function applyMagnet(){
   }
 }
 
-// ====== Eat detection
+// ---------- Eat detection ----------
 function checkEat(){
   const mouthX = x + 22;
   const mouthY = y;
@@ -551,13 +671,14 @@ function checkEat(){
 
   const ents = [...entitiesEl.querySelectorAll(".entity")];
 
+  const effectiveRadius = playerRadiusBase + Math.min(80, runUpRadius * 4);
+
   for (const el of ents){
     const r = el.getBoundingClientRect();
     const ex = r.left + r.width/2;
     const ey = r.top + r.height/2;
     const dist = Math.hypot(ex - mouthX, ey - mouthY);
 
-    const effectiveRadius = playerRadius + runUpRadius * 4;
     if (dist < effectiveRadius){
       const kind = el.dataset.kind;
       el.remove();
@@ -570,13 +691,12 @@ function checkEat(){
         const gained = combo;
         score += gained;
         totalScore += gained;
-        playMiam();
 
         eatenFood++;
         maxCombo = Math.max(maxCombo, combo);
 
-        // XP RUN
         runXP += 1;
+        playMiam();
 
         if (totalScore > bestScore){
           bestScore = totalScore;
@@ -595,20 +715,7 @@ function checkEat(){
 
       if (kind === "bonus"){
         takenBonus++;
-
-        // XP RUN
         runXP += 2;
-
-        if (Math.random() < 0.6){
-          timeLeft = Math.min(baseTime + 12, timeLeft + 6 + level * 0.4);
-        } else {
-          score += 5;
-          totalScore += 5;
-          if (totalScore > bestScore){
-            bestScore = totalScore;
-            localStorage.setItem(LS_BEST, String(bestScore));
-          }
-        }
         playBonus();
       }
 
@@ -636,7 +743,7 @@ function checkEat(){
   }
 }
 
-// ====== Boss init + follow
+// ---------- Boss init + follow ----------
 function initBoss(){
   bossActive = level >= 4;
 
@@ -667,6 +774,7 @@ function initBoss(){
 function updateBoss(dt){
   if (!bossActive) return;
 
+  // boss size (match your CSS)
   const isMobile = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
   const bossW = isMobile ? 380 : 520;
   const bossH = isMobile ? 213 : 292;
@@ -708,6 +816,7 @@ function updateBoss(dt){
 
   bossEl.style.transform = bossVX >= 0 ? "scaleX(-1)" : "scaleX(1)";
 
+  // bounds
   const pad = 40;
   bossX = Math.max(-200, Math.min(window.innerWidth - pad, bossX));
   bossY = Math.max(-200, Math.min(window.innerHeight - pad, bossY));
@@ -715,12 +824,13 @@ function updateBoss(dt){
   bossEl.style.left = `${bossX}px`;
   bossEl.style.top  = `${bossY}px`;
 
+  // collision
   const now = performance.now();
   const cdx = bossCenterX - x;
   const cdy = bossCenterY - y;
   const cdist = Math.hypot(cdx, cdy);
 
-  if (cdist < bossRadius + playerRadius * 0.6 && now - lastBossHitAt > 650){
+  if (cdist < bossRadius + playerRadiusBase * 0.6 && now - lastBossHitAt > 650){
     lastBossHitAt = now;
 
     bossHits++;
@@ -731,7 +841,7 @@ function updateBoss(dt){
   }
 }
 
-// ====== Confettis bulles (burst)
+// ---------- Confetti bubbles burst ----------
 function spawnConfettiBubblesBurst(count = 40){
   confettiBurstActive = true;
 
@@ -765,13 +875,10 @@ function spawnConfettiBubblesBurst(count = 40){
   setTimeout(() => { confettiBurstActive = false; }, 1200);
 }
 
-// ====== Décor: poissons nageurs
+// ---------- Swimmers ----------
 function createSwimmer(){
   const el = document.createElement("div");
   el.className = "swimmer";
-
-  const variant = Math.random() < 0.5 ? "swimmer1" : "swimmer2";
-  el.style.backgroundImage = `url("assets/fish/${variant}.png")`;
 
   const fromLeft = Math.random() > 0.5;
   const yy = 80 + Math.random() * (window.innerHeight - 160);
@@ -808,12 +915,11 @@ function createSwimmer(){
 function swimmersLoop(){
   if (!running) return;
   createSwimmer();
-
   const rate = Math.max(700, 2400 - level * 140);
   setTimeout(swimmersLoop, rate);
 }
 
-// ====== Bulles
+// ---------- Bubble loop ----------
 function spawnBubble(){
   const b = document.createElement("div");
   b.className = "bubble";
@@ -843,7 +949,7 @@ function bubbleLoop(){
   setTimeout(bubbleLoop, rate);
 }
 
-// ====== Level logic
+// ---------- Configure level ----------
 function configureLevel(){
   speed = 1 + (level - 1) * 0.18;
   target = 15 + (level - 1) * 8;
@@ -859,7 +965,8 @@ function configureLevel(){
   dashTime = 0;
   magnetTime = 0;
 
-  dashCooldownMax = Math.max(1.5, 3.0 - runUpDash * 0.25);
+  // apply dash upgrade (soft cap)
+  dashCooldownMax = Math.max(0.6, 3.0 - runUpDash * 0.12);
 
   entitiesEl.innerHTML = "";
   spawnFood(40 + level * 2);
@@ -872,28 +979,38 @@ function configureLevel(){
   syncHUD();
 }
 
+// ---------- Dash ----------
+function tryDash(){
+  if (!running) return;
+  if (dashCooldown > 0) return;
+
+  dashTime = dashTimeMax;
+  dashCooldown = dashCooldownMax;
+
+  playDash();
+  syncHUD();
+}
+
+// ---------- Win / Lose ----------
 function winLevel(){
   running = false;
   btnStart.textContent = "Reprendre";
-
   hideStatsBox();
+
   spawnConfettiBubblesBurst(46);
 
   showOverlay(
     `Niveau ${level} réussi ✅`,
-    `Total: ${totalScore} • Niveau suivant : ${level + 1}`,
+    `Choisis un upgrade (ou reroll)`,
     "win"
   );
 }
 
 function loseLevel(){
   running = false;
-
-  // ✅ fin de manche: reset XP + upgrades
   resetRunProgress();
 
   btnStart.textContent = "Reprendre";
-
   showStatsBox();
   renderStats();
 
@@ -904,7 +1021,7 @@ function loseLevel(){
   );
 }
 
-// ====== Random spawns
+// ---------- Random spawns ----------
 let lastSpawnAt = 0;
 function maybeSpawnRandom(){
   const now = performance.now();
@@ -925,23 +1042,7 @@ function maybeSpawnRandom(){
   spawnFood(10);
 }
 
-// ====== Dash
-function tryDash(){
-  if (!running) return;
-  if (dashCooldown > 0) return;
-
-  if (navigator.vibrate){
-    navigator.vibrate(20);
-  }
-
-  dashTime = dashTimeMax;
-  dashCooldown = dashCooldownMax;
-
-  playDash();
-  syncHUD();
-}
-
-// ====== Main loop
+// ---------- Main loop ----------
 let lastFrame = 0;
 function frame(t){
   if (!running) return;
@@ -973,7 +1074,7 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 
-// ====== Controls
+// ---------- Controls ----------
 window.addEventListener("mousemove", (e) => {
   mouseX = e.clientX;
   mouseY = e.clientY;
@@ -997,7 +1098,7 @@ if (btnDashMobile){
   });
 }
 
-window.addEventListener("keydown", (e) => {
+window.addEventListener("keydown", async (e) => {
   if (e.code === "Enter" && !overlay.classList.contains("hidden") && rulesBox && !rulesBox.classList.contains("hidden")){
     e.preventDefault();
     startGameFromOverlay();
@@ -1009,29 +1110,51 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// ====== Buttons
+// ---------- Start from overlay ----------
+async function startGameFromOverlay(){
+  // start new run
+  resetRunProgress();
+
+  hideRules();
+  hideOverlay();
+  hideStatsBox();
+  hideUpgradesBox();
+
+  running = true;
+  btnStart.textContent = "Pause";
+  setRunningUI(true);
+
+  if (soundToggle?.checked){
+    const ctx = ensureAudio();
+    if (ctx && ctx.state === "suspended") await ctx.resume();
+  }
+
+  lastFrame = 0;
+  bubbleLoop();
+  swimmersLoop();
+  requestAnimationFrame(frame);
+}
+
+// ---------- Buttons ----------
 if (btnPlay){
-  btnPlay.addEventListener("click", () => {
-    startGameFromOverlay();
-  });
+  btnPlay.addEventListener("click", () => startGameFromOverlay());
 }
 
 btnStart.addEventListener("click", async () => {
   if (!running){
-    hideRules();
-
-    // ✅ nouvelle manche
+    // start new run
     resetRunProgress();
 
-    running = true;
-    btnStart.textContent = "Pause";
+    hideRules();
     hideOverlay();
     hideStatsBox();
     hideUpgradesBox();
 
+    running = true;
+    btnStart.textContent = "Pause";
     setRunningUI(true);
 
-    if (soundToggle.checked){
+    if (soundToggle?.checked){
       const ctx = ensureAudio();
       if (ctx && ctx.state === "suspended") await ctx.resume();
     }
@@ -1058,9 +1181,7 @@ btnReset.addEventListener("click", () => {
   bossHits = 0;
   maxCombo = 1;
 
-  // ✅ nouvelle manche
   resetRunProgress();
-
   configureLevel();
   hideOverlay();
   hideStatsBox();
@@ -1072,71 +1193,36 @@ btnReset.addEventListener("click", () => {
   showRules();
 });
 
-btnNext.addEventListener("click", () => {
-  // (optionnel) tu peux garder ce bouton : l’upgrade relance déjà direct
-  level++;
-  configureLevel();
-  hideOverlay();
-  hideStatsBox();
-
-  running = true;
-  btnStart.textContent = "Pause";
-  setRunningUI(true);
-
-  lastFrame = 0;
-  bubbleLoop();
-  swimmersLoop();
-  requestAnimationFrame(frame);
-});
-
 btnRetry.addEventListener("click", () => {
-  const isWinOverlay = btnNext.style.display !== "none";
+  // recommencer / rejouer = retour menu rules
+  level = 1;
+  totalScore = 0;
 
-  if (isWinOverlay){
-    level = 1;
-    totalScore = 0;
+  eatenFood = 0;
+  takenBonus = 0;
+  takenMalus = 0;
+  takenPower = 0;
+  bossHits = 0;
+  maxCombo = 1;
 
-    eatenFood = 0;
-    takenBonus = 0;
-    takenMalus = 0;
-    takenPower = 0;
-    bossHits = 0;
-    maxCombo = 1;
-
-    // ✅ nouvelle manche
-    resetRunProgress();
-
-    configureLevel();
-    hideOverlay();
-    hideStatsBox();
-
-    running = false;
-    btnStart.textContent = "Démarrer";
-    setRunningUI(false);
-    syncHUD();
-
-    showRules();
-    return;
-  }
-
+  resetRunProgress();
   configureLevel();
   hideOverlay();
   hideStatsBox();
 
-  running = true;
-  btnStart.textContent = "Pause";
-  setRunningUI(true);
+  running = false;
+  btnStart.textContent = "Démarrer";
+  setRunningUI(false);
+  syncHUD();
 
-  lastFrame = 0;
-  bubbleLoop();
-  swimmersLoop();
-  requestAnimationFrame(frame);
+  showRules();
 });
 
-// ====== Init
+// ---------- Init ----------
 bestEl.textContent = bestScore;
+
 configureLevel();
 syncHUD();
 setRunningUI(false);
-renderUpgradeButtons();
 showRules();
+

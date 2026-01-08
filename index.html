@@ -121,33 +121,44 @@
       <div id="damageFlash"></div>
 
       <!-- ✅ UPGRADES (après niveau réussi) -->
-      <div id="upgrades" class="upgrades hidden">
-        <h3>Choisis un upgrade 🎁</h3>
+<div id="upgrades" class="upgrades hidden">
+  <h3>Choisis un upgrade 🎁</h3>
 
-        <div class="upgrades-grid">
-          <button class="upgrade-card" id="upSpeedBtn" type="button">
-            <div class="u-title">⚡ Vitesse</div>
-            <div class="u-desc">Ton poisson suit plus vite la cible</div>
-            <div class="u-level">Niveau: <b id="upSpeedLv">0</b>/5</div>
-          </button>
+  <div class="upgrades-grid">
+    <button class="upgrade-card" id="upSpeedBtn" type="button">
+      <div class="u-title">⚡ Vitesse</div>
+      <div class="u-desc">Ton poisson suit plus vite</div>
+      <div class="u-level">Niveau: <b id="upSpeedLv">0</b></div>
+    </button>
 
-          <button class="upgrade-card" id="upRadiusBtn" type="button">
-            <div class="u-title">🥫 Portée</div>
-            <div class="u-desc">Mange plus facilement (hitbox)</div>
-            <div class="u-level">Niveau: <b id="upRadiusLv">0</b>/5</div>
-          </button>
+    <button class="upgrade-card" id="upRadiusBtn" type="button">
+      <div class="u-title">🥫 Portée</div>
+      <div class="u-desc">Mange plus facilement (hitbox)</div>
+      <div class="u-level">Niveau: <b id="upRadiusLv">0</b></div>
+    </button>
 
-          <button class="upgrade-card" id="upDashBtn" type="button">
-            <div class="u-title">🌊 Dash</div>
-            <div class="u-desc">Dash plus souvent (cooldown ↓)</div>
-            <div class="u-level">Niveau: <b id="upDashLv">0</b>/4</div>
-          </button>
-        </div>
+    <button class="upgrade-card" id="upDashBtn" type="button">
+      <div class="u-title">🌊 Dash</div>
+      <div class="u-desc">Dash plus souvent (cooldown ↓)</div>
+      <div class="u-level">Niveau: <b id="upDashLv">0</b></div>
+    </button>
 
-        <div class="u-footer">
-          XP: <b id="xpTotalUI">0</b>
-        </div>
-      </div>
+    <!-- 🆕 4e UPGRADE (géré par le JS : rareté + effet aléatoire) -->
+    <button class="upgrade-card" type="button">
+      <div class="u-title">🎲 Mystère</div>
+      <div class="u-desc">Effet aléatoire selon rareté</div>
+      <div class="u-level">?</div>
+    </button>
+  </div>
+
+  <div class="u-footer">
+    <button id="btnReroll" type="button" class="secondary">
+      Reroll (<span id="rerollCost">5</span> XP)
+    </button>
+    XP: <b id="xpTotalUI">0</b>
+  </div>
+</div>
+
 
       <!-- Actions -->
       <div class="actions">

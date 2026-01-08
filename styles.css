@@ -638,3 +638,119 @@ button.secondary{ opacity: 0.9; }
 .hidden{
   display: none !important;
 }
+
+
+/* =========================================================
+   OVERRIDE: Hover Glow (Option 2 + 3)
+   - No continuous pulse.
+   - Common: no animation
+   - Rare/Epic/Legendary: glow animation only on hover
+========================================================= */
+
+/* Stop any continuous rarity animations (if present above) */
+.upgrade-card.rarity-rare,
+.upgrade-card[data-rarity="rare"],
+.upgrade-card.rarity-epic,
+.upgrade-card[data-rarity="epic"],
+.upgrade-card.rarity-legendary,
+.upgrade-card[data-rarity="legendary"]{
+  animation: none !important;
+}
+
+/* Keep rarity borders/glow base (static) */
+.upgrade-card.rarity-rare,
+.upgrade-card[data-rarity="rare"]{
+  border-color: rgba(60, 180, 255, 0.55);
+  box-shadow: 0 0 18px rgba(60, 180, 255, 0.18);
+}
+.upgrade-card.rarity-epic,
+.upgrade-card[data-rarity="epic"]{
+  border-color: rgba(180, 90, 255, 0.62);
+  box-shadow: 0 0 22px rgba(180, 90, 255, 0.20);
+}
+.upgrade-card.rarity-legendary,
+.upgrade-card[data-rarity="legendary"]{
+  border-color: rgba(255, 210, 80, 0.75);
+  box-shadow: 0 0 26px rgba(255, 210, 80, 0.22);
+}
+
+/* Elegant glow animation */
+@keyframes hoverGlow {
+  0%   { box-shadow: 0 0 12px rgba(255,255,255,0.14); }
+  50%  { box-shadow: 0 0 26px rgba(255,255,255,0.34); }
+  100% { box-shadow: 0 0 12px rgba(255,255,255,0.14); }
+}
+
+/* Common: no animation */
+.upgrade-card.rarity-common:hover,
+.upgrade-card[data-rarity="common"]:hover{
+  animation: none !important;
+}
+
+/* Rare: slow glow */
+.upgrade-card.rarity-rare:hover,
+.upgrade-card[data-rarity="rare"]:hover{
+  animation: hoverGlow 2.6s ease-in-out infinite;
+  filter: brightness(1.05);
+}
+
+/* Epic: a bit faster */
+.upgrade-card.rarity-epic:hover,
+.upgrade-card[data-rarity="epic"]:hover{
+  animation: hoverGlow 2.0s ease-in-out infinite;
+  filter: brightness(1.10);
+}
+
+/* Legendary: strongest */
+.upgrade-card.rarity-legendary:hover,
+.upgrade-card[data-rarity="legendary"]:hover{
+  animation: hoverGlow 1.4s ease-in-out infinite;
+  filter: brightness(1.18) saturate(1.12);
+}
+
+/* Shine & sparkle ONLY on hover (not permanent) */
+.upgrade-card.rarity-rare::after,
+.upgrade-card[data-rarity="rare"]::after,
+.upgrade-card.rarity-epic::after,
+.upgrade-card[data-rarity="epic"]::after,
+.upgrade-card.rarity-legendary::after,
+.upgrade-card[data-rarity="legendary"]::after{
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+.upgrade-card.rarity-rare:hover::after,
+.upgrade-card[data-rarity="rare"]:hover::after,
+.upgrade-card.rarity-epic:hover::after,
+.upgrade-card[data-rarity="epic"]:hover::after,
+.upgrade-card.rarity-legendary:hover::after,
+.upgrade-card[data-rarity="legendary"]:hover::after{
+  opacity: 0.55 !important;
+  animation: shineSweep 2.8s ease-in-out infinite !important;
+}
+
+.upgrade-card.rarity-legendary::before,
+.upgrade-card[data-rarity="legendary"]::before{
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+.upgrade-card.rarity-legendary:hover::before,
+.upgrade-card[data-rarity="legendary"]:hover::before{
+  opacity: 0.35 !important;
+  animation: sparkle 1.1s ease-in-out infinite !important;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .upgrade-card:hover{
+    animation: none !important;
+  }
+  .upgrade-card::before,
+  .upgrade-card::after{
+    animation: none !important;
+  }
+}
+/* =========================================================
+   FIN DU FICHIER styles.css
+   ========================================================= */
