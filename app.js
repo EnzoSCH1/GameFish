@@ -22,8 +22,10 @@ const comboEl  = document.getElementById("combo");
 const totalEl = document.getElementById("total");
 const bestEl  = document.getElementById("best");
 
-const dashEl   = document.getElementById("dash");
-const magnetEl = document.getElementById("magnet");
+
+const dashFill = document.getElementById("dashFill");
+const dashCooldownUI = document.getElementById("dashCooldownUI");
+const dashCooldownFill = document.getElementById("dashCooldownFill");
 
 const btnPlay  = document.getElementById("btnPlay");
 const btnStart = document.getElementById("btnStart");
@@ -55,6 +57,7 @@ const stMaxCombo = document.getElementById("stMaxCombo");
 const upgradesBox = document.getElementById("upgrades");
 const xpTotalUI = document.getElementById("xpTotalUI");
 const btnReroll = document.getElementById("btnReroll");
+const btnSkipUpgrade = document.getElementById("btnSkipUpgrade");
 
 // 4 cartes = 4 premiers .upgrade-card
 const upgradeCards = upgradesBox
@@ -282,8 +285,14 @@ function syncHUD(){
   totalEl.textContent = totalScore;
   bestEl.textContent = bestScore;
 
-  dashEl.textContent = dashCooldown > 0 ? `${dashCooldown.toFixed(1)}s` : "prêt";
-  magnetEl.textContent = magnetTime > 0 ? `${magnetTime.toFixed(1)}s` : "off";
+  // ✅ BARRE DE DASH (0 → vide / 1 → prêt)
+  if (dashCooldownFill){
+    const pct = dashCooldownMax <= 0
+      ? 1
+      : (1 - Math.min(1, dashCooldown / dashCooldownMax));
+
+    dashCooldownFill.style.width = `${pct * 100}%`;
+  }
 
   renderStats();
 }
@@ -325,8 +334,12 @@ function showOverlay(title, msg, mode){
   hideRules();
   if (btnPlay) btnPlay.style.display = "none";
 
+  // ✅ par défaut
   hideUpgradesBox();
   showOverlayActions();
+
+  // ✅ cacher "Passer" par défaut (important)
+  if (btnSkipUpgrade) btnSkipUpgrade.classList.add("hidden");
 
   if (mode === "win"){
     // prepare offers + reroll
@@ -339,11 +352,15 @@ function showOverlay(title, msg, mode){
     showUpgradesBox();
     hideOverlayActions();
 
-    // no need "Continuer" button
+    // no need "Continuer" button (tu continues via upgrade ou passer)
     btnNext.style.display = "none";
 
     btnRetry.style.display = "inline-block";
     btnRetry.textContent = "Recommencer";
+
+    // ✅ afficher "Passer" sur l'écran upgrades
+    if (btnSkipUpgrade) btnSkipUpgrade.classList.remove("hidden");
+
   } else {
     // lose
     btnNext.style.display = "none";
@@ -352,6 +369,9 @@ function showOverlay(title, msg, mode){
 
     hideUpgradesBox();
     showOverlayActions();
+
+    // ✅ on s'assure que "Passer" reste caché
+    if (btnSkipUpgrade) btnSkipUpgrade.classList.add("hidden");
   }
 
   setRunningUI(false);
@@ -547,6 +567,33 @@ function applyOffer(offer){
 if (btnReroll){
   btnReroll.addEventListener("click", doReroll);
 }
+
+if (btnSkipUpgrade){
+  btnSkipUpgrade.addEventListener("click", () => {
+    // évite double clic
+    if (upgradeChosenThisWin) return;
+    upgradeChosenThisWin = true;
+
+    // ferme l'écran upgrades
+    hideUpgradesBox();
+    hideOverlay();
+    hideStatsBox();
+
+    // ✅ passe au niveau suivant DIRECTEMENT
+    level++;
+    configureLevel();
+
+    running = true;
+    btnStart.textContent = "Pause";
+    setRunningUI(true);
+
+    lastFrame = 0;
+    bubbleLoop();
+    swimmersLoop();
+    requestAnimationFrame(frame);
+  });
+}
+
 
 // ---------- Parallax ----------
 function updateParallax(){
@@ -999,12 +1046,24 @@ function winLevel(){
 
   spawnConfettiBubblesBurst(46);
 
+  // ✅ reset état upgrade pour cette manche
+  upgradeChosenThisWin = false;
+
+  // ✅ on bloque "Continuer" tant qu’aucun choix n’est fait
+  if (btnNext) btnNext.disabled = true;
+
   showOverlay(
     `Niveau ${level} réussi ✅`,
     `Choisis un upgrade (ou reroll)`,
     "win"
   );
+
+  // ✅ affiche le menu d’upgrades
+  showUpgradesBox();
+  hideOverlayActions();
+  renderUpgradeButtons();
 }
+
 
 function loseLevel(){
   running = false;

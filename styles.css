@@ -545,6 +545,75 @@ button.secondary{ opacity: 0.9; }
   }
 }
 
+.dashbar{
+  width: 140px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.16);
+  overflow: hidden;
+}
+
+#dashFill{
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(120,240,255,0.75);
+  transform-origin: left center;
+  transform: scaleX(1);
+  transition: transform 0.08s linear;
+}
+
+/* =========================
+   Dash cooldown bar (bas centre)
+========================= */
+#dashCooldownUI{
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  width: min(520px, 86vw);
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  z-index: 25000;
+  pointer-events: none;
+}
+
+#dashCooldownFill{
+  height: 100%;
+  width: 0%; /* ✅ part vide */
+  border-radius: 999px;
+  background: rgba(80, 180, 255, 0.95);
+  box-shadow: 0 0 18px rgba(80, 180, 255, 0.35);
+  transition: width 0.08s linear; /* ✅ fluide */
+}
+
+/* Barre bleue visible UNIQUEMENT en jeu */
+#dashCooldownUI{ 
+  display: none; 
+}
+
+body.game-running #dashCooldownUI{
+  display: block;
+}
+
+
+/* Sur mobile: un peu plus bas/fin */
+@media (max-width: 520px){
+  #dashCooldownUI{
+    bottom: 16px;
+    height: 11px;
+  }
+}
+
+/* mobile : un peu plus grand */
+@media (max-width: 520px){
+  .dashbar{ width: 120px; }
+}
 
 
 /* =========================================================

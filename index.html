@@ -47,9 +47,6 @@
       <button id="btnStart">Démarrer</button>
       <button id="btnReset" class="secondary">Recommencer</button>
 
-      <div class="pill">Dash: <b id="dash">prêt</b></div>
-      <div class="pill">Aimant: <b id="magnet">off</b></div>
-
       <label class="toggle">
         <input type="checkbox" id="soundToggle" checked />
         <span>Son</span>
@@ -155,6 +152,7 @@
     <button id="btnReroll" type="button" class="secondary">
       Reroll (<span id="rerollCost">5</span> XP)
     </button>
+    <button id="btnSkipUpgrade" class="secondary hidden">Passer</button>
     XP: <b id="xpTotalUI">0</b>
   </div>
 </div>
@@ -168,6 +166,12 @@
       </div>
     </div>
   </div>
+
+  <!-- Dash Cooldown Bar (bas centre) -->
+<div id="dashCooldownUI">
+  <div id="dashCooldownFill"></div>
+</div>
+
 
   <script src="app.js"></script>
 </body>
