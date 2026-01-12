@@ -90,6 +90,147 @@ const dashTimeMax = 0.25;
 // Boss
 const bossRadius = 95;
 
+// =========================
+// META XP + SKINS (persistant)
+// =========================
+const LS_META_XP = "sea_meta_xp";
+const LS_META_MAX = "sea_meta_xp_max";
+const LS_UNLOCKED_SKINS = "sea_unlocked_skins";
+const LS_SEEN_SKINS = "sea_seen_skins";
+const LS_EQUIP_CURSOR = "sea_equip_cursor";
+const LS_EQUIP_BOSS = "sea_equip_boss";
+
+// barre meta
+let metaXP = Number(localStorage.getItem(LS_META_XP) || "0");
+let metaXPMax = Number(localStorage.getItem(LS_META_MAX) || "350"); // départ 350
+
+// inventaire
+let unlockedSkins = new Set(JSON.parse(localStorage.getItem(LS_UNLOCKED_SKINS) || "[]"));
+let seenSkins = new Set(JSON.parse(localStorage.getItem(LS_SEEN_SKINS) || "[]"));
+
+// équipé
+let equippedCursor = localStorage.getItem(LS_EQUIP_CURSOR) || "cursor_base";
+let equippedBoss = localStorage.getItem(LS_EQUIP_BOSS) || "boss_base";
+
+// placeholders (tu remplaceras src plus tard par tes vraies images)
+const CURSOR_SKINS = [
+  { id:"cursor_base", name:"Classique", rarity:"common", oneIn: 1, src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_1", name:"Guppy", rarity:"common",    oneIn: 5,   src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_2", name:"Truite", rarity:"common",   oneIn: 5,   src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_3", name:"Sardine", rarity:"rare",    oneIn: 25,  src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_4", name:"Poisson-ange", rarity:"rare", oneIn: 25, src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_5", name:"Koi", rarity:"epic",       oneIn: 120, src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_6", name:"Légendaire", rarity:"legendary", oneIn: 400, src:"assets/fish/skins/cursor.png" },
+];
+
+const BOSS_SKINS = [
+  { id:"boss_base", name:"Classique", rarity:"common",  oneIn: 1,   src:"assets/fish/skins/boss.png" },
+  { id:"boss_1", name:"Requin", rarity:"common",     oneIn: 8,   src:"assets/fish/skins/boss.png" },
+  { id:"boss_2", name:"Requin bleu", rarity:"rare",  oneIn: 40,  src:"assets/fish/skins/boss.png" },
+  { id:"boss_3", name:"Mégalodon", rarity:"epic",    oneIn: 160, src:"assets/fish/skins/boss.png" },
+  { id:"boss_4", name:"Apex", rarity:"legendary",    oneIn: 600, src:"assets/fish/skins/boss.png" },
+];
+
+function saveMeta(){
+  localStorage.setItem(LS_META_XP, String(metaXP));
+  localStorage.setItem(LS_META_MAX, String(metaXPMax));
+  localStorage.setItem(LS_UNLOCKED_SKINS, JSON.stringify([...unlockedSkins]));
+  localStorage.setItem(LS_SEEN_SKINS, JSON.stringify([...seenSkins]));
+  localStorage.setItem(LS_EQUIP_CURSOR, equippedCursor);
+  localStorage.setItem(LS_EQUIP_BOSS, equippedBoss);
+}
+
+// UI meta
+const metaXPFill = document.getElementById("metaXPFill");
+const metaXPText = document.getElementById("metaXPText");
+const aquariumBadge = document.getElementById("aquariumBadge");
+
+// applique les skins équipés
+function applyEquippedSkins(){
+  const cur = CURSOR_SKINS.find(s => s.id === equippedCursor);
+  if (cur && cursorFish) cursorFish.style.backgroundImage = `url("${cur.src}")`;
+
+  const boss = BOSS_SKINS.find(s => s.id === equippedBoss);
+  if (boss && bossEl) bossEl.style.backgroundImage = `url("${boss.src}")`;
+}
+
+// badge = skins débloqués non vus
+function updateAquariumBadge(){
+  if (!aquariumBadge) return;
+
+  let unseen = 0;
+  for (const id of unlockedSkins){
+    if (!seenSkins.has(id)) unseen++;
+  }
+
+  if (unseen > 0){
+    aquariumBadge.textContent = String(unseen);
+    aquariumBadge.classList.remove("hidden");
+  } else {
+    aquariumBadge.classList.add("hidden");
+  }
+}
+
+function renderMetaBar(){
+  if (metaXPFill){
+    const pct = Math.max(0, Math.min(1, metaXP / metaXPMax));
+    metaXPFill.style.width = `${pct * 100}%`;
+  }
+  if (metaXPText){
+    metaXPText.textContent = `XP: ${metaXP} / ${metaXPMax}`;
+  }
+  updateAquariumBadge();
+}
+
+// Débloquer un skin selon rareté (1 chance sur X)
+function tryUnlockOneSkin(){
+  const pool = [...CURSOR_SKINS, ...BOSS_SKINS].filter(s => !unlockedSkins.has(s.id));
+  if (pool.length === 0) return null;
+
+  // on tente dans l’ordre: legendary -> epic -> rare -> common
+  const order = ["legendary", "epic", "rare", "common"];
+
+  for (const r of order){
+    const candidates = pool.filter(s => s.rarity === r);
+    if (!candidates.length) continue;
+
+    const sample = candidates[Math.floor(Math.random() * candidates.length)];
+    // 1 chance sur X
+    if (Math.floor(Math.random() * sample.oneIn) === 0){
+      unlockedSkins.add(sample.id);
+      saveMeta();
+      return sample;
+    }
+  }
+  return null;
+}
+
+// Ajout de meta XP ; si barre pleine -> unlock
+function addMetaXP(amount){
+  metaXP += amount;
+
+  // boucle si tu remplis plusieurs fois d’un coup
+  while (metaXP >= metaXPMax){
+    metaXP -= metaXPMax;
+
+    const unlocked = tryUnlockOneSkin();
+
+    // montée progressive de la barre
+    metaXPMax = Math.min(600, Math.floor(metaXPMax * 1.22 + 12));
+
+    // si unlock, on marque "non vu"
+    // (donc badge augmente)
+    if (unlocked){
+      // ne pas l’ajouter à seenSkins => il reste “non vu”
+      saveMeta();
+    }
+  }
+
+  saveMeta();
+  renderMetaBar();
+}
+
+
 // ---------- RUN ONLY PROGRESS ----------
 let runXP = 0;
 let runUpSpeed = 0;    // infinite (soft-capped in effect)
@@ -594,6 +735,27 @@ if (btnSkipUpgrade){
   });
 }
 
+const btnAquarium = document.getElementById("btnAquarium");
+const skinOverlay = document.getElementById("skinOverlay");
+const btnCloseSkins = document.getElementById("btnCloseSkins");
+
+function openAquarium(){
+  if (!skinOverlay) return;
+
+  // marque tous les skins débloqués comme "vus"
+  for (const id of unlockedSkins) seenSkins.add(id);
+  saveMeta();
+  updateAquariumBadge();
+
+  skinOverlay.classList.remove("hidden");
+}
+
+function closeAquarium(){
+  skinOverlay?.classList.add("hidden");
+}
+
+if (btnAquarium) btnAquarium.addEventListener("click", openAquarium);
+if (btnCloseSkins) btnCloseSkins.addEventListener("click", closeAquarium);
 
 // ---------- Parallax ----------
 function updateParallax(){
@@ -743,6 +905,7 @@ function checkEat(){
         maxCombo = Math.max(maxCombo, combo);
 
         runXP += 1;
+        addMetaXP(1); // chaque nourriture donne un peu d'XP meta
         playMiam();
 
         if (totalScore > bestScore){
@@ -758,6 +921,7 @@ function checkEat(){
         if (entitiesEl.querySelectorAll(".food").length < 10){
           spawnFood(22);
         }
+        
       }
 
       if (kind === "bonus"){
@@ -1045,6 +1209,8 @@ function winLevel(){
   hideStatsBox();
 
   spawnConfettiBubblesBurst(46);
+  addMetaXP(15); // récompense de victoire (ajuste si tu veux)
+
 
   // ✅ reset état upgrade pour cette manche
   upgradeChosenThisWin = false;
@@ -1061,7 +1227,7 @@ function winLevel(){
   // ✅ affiche le menu d’upgrades
   showUpgradesBox();
   hideOverlayActions();
-  renderUpgradeButtons();
+  renderOffers();
 }
 
 
@@ -1284,4 +1450,7 @@ configureLevel();
 syncHUD();
 setRunningUI(false);
 showRules();
+applyEquippedSkins();
+renderMetaBar();
+
 

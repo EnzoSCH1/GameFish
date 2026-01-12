@@ -99,6 +99,12 @@
           <li>🧲 <b>Power Aimant</b> : attire la nourriture</li>
         </ul>
 
+        <h3>🐠 Boutique Aquarium</h3>
+        <p>
+          Gagne de l’XP pour débloquer des skins incroyables !!!
+          Dans la boutique de l'aquarium, en bas à gauche de ton écran.
+        </p>
+
         <h3>⬆️ Upgrades</h3>
         <p>
           Après chaque niveau réussi, choisis un upgrade
@@ -170,6 +176,11 @@
   </div>
 </div>
 
+<!-- Aquarium button (visible only when overlay/menu is visible) -->
+<button id="btnAquarium" class="aquarium" type="button" aria-label="Aquarium">
+  🐠
+  <span id="aquariumBadge" class="badge">0</span>
+</button>
 
       <!-- Actions -->
       <div class="actions">
@@ -183,6 +194,35 @@
   <!-- Dash Cooldown Bar (bas centre) -->
 <div id="dashCooldownUI">
   <div id="dashCooldownFill"></div>
+</div>
+
+<!-- META XP BAR + Aquarium button (persistent progress) -->
+<div id="metaUI">
+  <div id="metaXPBar">
+    <div id="metaXPFill"></div>
+  </div>
+  <div id="metaXPText">XP: 0 / 50</div>
+</div>
+
+<!-- Aquarium / Skins menu -->
+<div id="skinOverlay" class="hidden">
+  <div class="skin-panel">
+    <div class="skin-head">
+      <div class="skin-title">Changer de skin</div>
+      <button id="btnCloseSkins" type="button" class="secondary">✕</button>
+    </div>
+
+    <div class="skin-tabs">
+      <button id="tabCursor" type="button" class="tab active">Poisson</button>
+      <button id="tabBoss" type="button" class="tab">Boss</button>
+    </div>
+
+    <div id="skinGrid" class="skin-grid"></div>
+
+    <div class="skin-foot">
+      <div id="skinHint" class="skin-hint">Débloque des skins via la barre XP 🎁</div>
+    </div>
+  </div>
 </div>
 
 

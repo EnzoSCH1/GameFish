@@ -202,7 +202,7 @@ body.game-running{
   z-index: 8;
   width: 520px;
   height: 292px;
-  background: url("assets/fish/boss.png") center/contain no-repeat;
+  background: url("assets/fish/skins/boss.png") center/contain no-repeat;
   left: -9999px;
   top: -9999px;
   pointer-events: none;
@@ -216,17 +216,17 @@ body.game-running{
 #cursorWrap{
   position:fixed; left:0; top:0;
   width:0; height:0;
-  z-index: 9999;
+  z-index: 99999;
   pointer-events:none;
 }
 #cursorFish{
   position: fixed;
   width: 72px;
   height: 72px;
-  background: url("assets/fish/cursor.png") center/contain no-repeat;
+  background: url("assets/fish/skins/cursor.png") center/contain no-repeat;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  z-index: 50;
+  z-index: 8;
   filter: drop-shadow(0 10px 14px rgba(0,0,0,0.35));
   will-change: transform;
 }
@@ -599,6 +599,253 @@ button.secondary{ opacity: 0.9; }
 
 body.game-running #dashCooldownUI{
   display: block;
+}
+
+/* =========================
+   META XP UI + Aquarium
+========================= */
+#metaUI{
+  position: fixed;
+  left: 50%;
+  bottom: 58px;              /* au-dessus de ta barre dash */
+  transform: translateX(-50%);
+  width: min(560px, 88vw);
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none; /* le bouton aura pointer-events */
+}
+
+/* Aquarium button IN overlay (visible only when overlay is visible) */
+#overlay:not(.hidden) #btnAquarium{
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* position bas gauche dans l’overlay */
+#btnAquarium.aquarium{
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 32000;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.28);
+  backdrop-filter: blur(10px);
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  display: none; /* caché par défaut, affiché via règle au-dessus */
+}
+
+
+#btnAquarium.aquarium:hover{
+  background: rgba(0,0,0,0.38);
+}
+
+/* Badge (unseen skins count) */
+#aquariumBadge.badge{
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255,80,120,0.95);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+}
+
+/* Show aquarium only when overlay is visible (menus) */
+#overlay.hidden #btnAquarium.aquarium{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hidden{ display:none !important; }
+
+
+#metaXPBar{
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.18);
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+#metaXPFill{
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: rgba(80, 180, 255, 0.95);
+  box-shadow: 0 0 18px rgba(80, 180, 255, 0.35);
+  transition: width 0.12s linear;
+}
+
+#metaXPText{
+  pointer-events: none;
+  font-size: 12px;
+  opacity: .9;
+  white-space: nowrap;
+}
+
+/* Visible uniquement en jeu */
+#metaUI{ display:none; }
+body.game-running #metaUI{ display:flex; }
+
+@media (max-width:520px){
+  #metaUI{ bottom: 52px; gap: 8px; }
+  #btnAquarium{ width: 42px; height: 42px; }
+  #metaXPText{ display:none; }
+}
+
+/* =========================
+   Skins overlay (Aquarium)
+========================= */
+#skinOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  background: rgba(0,0,0,0.60);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#skinOverlay.hidden{ display:none; }
+
+.skin-panel{
+  width: min(860px, 92vw);
+  background: rgba(5, 15, 25, 0.78);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.skin-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.skin-title{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.skin-tabs{
+  display:flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tab{
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.18);
+  cursor: pointer;
+  color: white;
+}
+
+.tab.active{
+  border-color: rgba(120,240,255,0.35);
+  background: rgba(120,240,255,0.12);
+}
+
+.skin-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 900px){
+  .skin-grid{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 520px){
+  .skin-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+
+.skin-card{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+  padding: 10px;
+  text-align: left;
+}
+
+.skin-top{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.skin-name{
+  font-weight: 800;
+}
+
+.skin-rarity{
+  font-size: 12px;
+  opacity: .9;
+}
+
+.skin-preview{
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.skin-actions{
+  display:flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.skin-actions button{
+  flex: 1;
+}
+
+.locked .skin-preview{
+  filter: grayscale(1) brightness(0.7);
+}
+.locked .skin-actions button{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Rareté couleurs */
+.r-common{ border-color: rgba(255,255,255,0.14); }
+.r-rare{ border-color: rgba(60,180,255,0.55); box-shadow: 0 0 14px rgba(60,180,255,0.12); }
+.r-epic{ border-color: rgba(180,90,255,0.62); box-shadow: 0 0 16px rgba(180,90,255,0.14); }
+.r-legendary{ border-color: rgba(255,210,80,0.75); box-shadow: 0 0 18px rgba(255,210,80,0.16); }
+
+.skin-foot{
+  margin-top: 10px;
+  opacity: .9;
 }
 
 
