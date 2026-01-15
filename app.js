@@ -114,14 +114,14 @@ let equippedBoss = localStorage.getItem(LS_EQUIP_BOSS) || "boss_base";
 
 // placeholders (tu remplaceras src plus tard par tes vraies images)
 const CURSOR_SKINS = [
-  { id:"cursor_base", name:"Classique", rarity:"common", oneIn: 1, src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_1", name:"Guppy", rarity:"common",    oneIn: 15,   src:"assets/fish/skins/cursor1.png" },
-  { id:"cursor_2", name:"Poisson-rouge", rarity:"common",   oneIn: 15,   src:"assets/fish/skins/cursor2.png" },
-  { id:"cursor_3", name:"Sardine", rarity:"common",    oneIn: 15,  src:"assets/fish/skins/cursor3.png" },
+  { id:"cursor_base", name:"Classique", rarity:"common", src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_1", name:"Guppy", rarity:"common", oneIn: 15,   src:"assets/fish/skins/cursor1.png" },
+  { id:"cursor_2", name:"Poisson-rouge", rarity:"common", oneIn: 15, src:"assets/fish/skins/cursor2.png" },
+  { id:"cursor_3", name:"Sardine", rarity:"common", oneIn: 15,  src:"assets/fish/skins/cursor3.png" },
   { id:"cursor_4", name:"Poisson-volant", rarity:"common", oneIn: 15, src:"assets/fish/skins/cursor4.png" },
   { id:"cursor_5", name:"Poisson-ange", rarity:"rare", oneIn: 25, src:"assets/fish/skins/cursor5.png" },
-  { id:"cursor_6", name:"Poisson-globe", rarity:"rare",       oneIn: 25, src:"assets/fish/skins/cursor6.png" },
-  { id:"cursor_7", name:"Baliste", rarity:"rare",       oneIn: 25, src:"assets/fish/skins/cursor7.png" },
+  { id:"cursor_6", name:"Poisson-globe", rarity:"rare", oneIn: 25, src:"assets/fish/skins/cursor6.png" },
+  { id:"cursor_7", name:"Baliste", rarity:"rare", oneIn: 25, src:"assets/fish/skins/cursor7.png" },
   { id:"cursor_8", name:"Poisson-lune", rarity:"epic", oneIn: 300, src:"assets/fish/skins/cursor8.png" },
   { id:"cursor_9", name:"Poisson-lion", rarity:"epic", oneIn: 300, src:"assets/fish/skins/cursor9.png" },
   { id:"cursor_10", name:"Poisson-translucide", rarity:"legendary", oneIn: 650, src:"assets/fish/skins/cursor10.png" },
@@ -129,13 +129,13 @@ const CURSOR_SKINS = [
 ];
 
 const BOSS_SKINS = [
-  { id:"boss_base", name:"Classique", rarity:"common",  oneIn: 1,   src:"assets/fish/skins/boss.png" },
-  { id:"boss_1", name:"Requin-blanc", rarity:"common",     oneIn: 25,   src:"assets/fish/skins/boss1.png" },
-  { id:"boss_2", name:"Requin baleine", rarity:"rare",  oneIn: 55,  src:"assets/fish/skins/boss2.png" },
-  { id:"boss_3", name:"Mégalodon", rarity:"epic",    oneIn: 350, src:"assets/fish/skins/boss3.png" },
-  { id:"boss_4", name:"Apex", rarity:"epic",    oneIn: 350, src:"assets/fish/skins/boss4.png" },
-  { id:"boss_5", name:"Livyatan", rarity:"legendary",    oneIn: 600, src:"assets/fish/skins/boss5.png" },
-  { id:"boss_6", name:"Mosasaure", rarity:"legendary",    oneIn: 600, src:"assets/fish/skins/boss6.png" },
+  { id:"boss_base", name:"Classique", rarity:"common", src:"assets/fish/skins/boss.png" },
+  { id:"boss_1", name:"Requin-blanc", rarity:"common",  oneIn: 25, src:"assets/fish/skins/boss1.png" },
+  { id:"boss_2", name:"Requin baleine", rarity:"rare", oneIn: 55, src:"assets/fish/skins/boss2.png" },
+  { id:"boss_3", name:"Mégalodon", rarity:"epic", oneIn: 350, src:"assets/fish/skins/boss3.png" },
+  { id:"boss_4", name:"Apex", rarity:"epic", oneIn: 350, src:"assets/fish/skins/boss4.png" },
+  { id:"boss_5", name:"Livyatan", rarity:"legendary", oneIn: 600, src:"assets/fish/skins/boss5.png" },
+  { id:"boss_6", name:"Mosasaure", rarity:"legendary", oneIn: 600, src:"assets/fish/skins/boss6.png" },
 ];
 
 function saveMeta(){
@@ -191,7 +191,7 @@ function renderMetaBar(){
 
 // Débloquer un skin selon rareté (1 chance sur X)
 function tryUnlockOneSkin(){
-  const pool = [...CURSOR_SKINS, ...BOSS_SKINS].filter(s => !unlockedSkins.has(s.id));
+  const pool = [...CURSOR_SKINS, ...BOSS_SKINS].filter(s =>s.oneIn && !unlockedSkins.has(s.id));
   if (pool.length === 0) return null;
 
   // on tente dans l’ordre: legendary -> epic -> rare -> common
