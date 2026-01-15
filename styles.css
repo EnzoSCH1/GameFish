@@ -775,6 +775,38 @@ body.game-running #metaUI{ display:flex; }
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
+/* === Aquarium scrollable === */
+.skin-panel{
+  display: flex;              /* AJOUT */
+  flex-direction: column;     /* AJOUT */
+  max-height: min(80vh, 560px); /* AJOUT */
+}
+
+.skin-grid{
+  flex: 1;                    /* AJOUT */
+  min-height: 0;              /* AJOUT CRUCIAL */
+  overflow-y: auto;           /* AJOUT */
+  padding-right: 6px;         /* AJOUT */
+}
+
+/* Scrollbar discrète aquarium */
+.skin-grid::-webkit-scrollbar{
+  width: 8px;
+}
+.skin-grid::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.skin-grid::-webkit-scrollbar-track{
+  background: rgba(0,0,0,0.15);
+}
+
+@media (max-width: 600px){
+  .skin-grid{
+    max-height: 320px;
+  }
+}
+
 
 @media (max-width: 900px){
   .skin-grid{ grid-template-columns: repeat(3, 1fr); }
@@ -848,6 +880,137 @@ body.game-running #metaUI{ display:flex; }
   opacity: .9;
 }
 
+/* Bouton boutique dans le panel (à côté de l’aquarium) */
+#btnShop.shop{
+  position: absolute;
+  left: 80px;  /* à côté du bouton aquarium */
+  bottom: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.28);
+  backdrop-filter: blur(10px);
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display:none;
+  z-index: 20001;
+}
+#btnShop.shop:hover{ background: rgba(0,0,0,0.38); }
+
+/* visible seulement quand overlay visible */
+#overlay:not(.hidden) #btnShop{ display:inline-flex !important; align-items:center; justify-content:center; }
+
+/* Shop overlay */
+#shopOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  background: rgba(0,0,0,0.60);
+  backdrop-filter: blur(10px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#shopOverlay.hidden{ display:none; }
+
+.shop-panel{
+  width: min(900px, 94vw);
+  background: rgba(5,15,25,0.82);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.shop-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.shop-title{ font-size: 18px; font-weight: 800; }
+
+.shop-topbar{
+  display:flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  opacity: .95;
+}
+.wallet{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.18);
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.shop-tabs{ display:flex; gap: 10px; margin-bottom: 12px; }
+
+.shop-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px){ .shop-grid{ grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 520px){ .shop-grid{ grid-template-columns: repeat(2, 1fr); } }
+
+.shop-card{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+  padding: 10px;
+}
+
+.shop-card .preview{
+  width:100%;
+  aspect-ratio: 1/1;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.shop-card .name{ font-weight: 800; margin-top: 8px; }
+.shop-card .rarity{ opacity: .9; margin-top: 2px; font-size: 12px; }
+.shop-card .price{ opacity: .9; margin-top: 6px; font-size: 13px; }
+
+.shop-card button{
+  width:100%;
+  margin-top: 10px;
+}
+.shop-card button:disabled{ opacity:.5; cursor:not-allowed; }
+
+/* =========================================
+   Boutique scrollable (si trop de skins)
+========================================= */
+
+/* Conteneur de la grille boutique */
+.shop-grid{
+  max-height: 420px;     /* ≈ 2 lignes de cartes */
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Scrollbar discrète */
+.shop-grid::-webkit-scrollbar{
+  width: 8px;
+}
+.shop-grid::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.shop-grid::-webkit-scrollbar-track{
+  background: rgba(0,0,0,0.15);
+}
+
+@media (max-width: 600px){
+  .shop-grid{
+    max-height: 320px;
+  }
+}
 
 /* Sur mobile: un peu plus bas/fin */
 @media (max-width: 520px){

@@ -181,6 +181,32 @@
   🐠
   <span id="aquariumBadge" class="badge">0</span>
 </button>
+<!-- Shop button (dans l'overlay panel) -->
+<button id="btnShop" class="shop hidden" type="button" aria-label="Boutique">
+  🛒
+</button>
+
+<!-- Shop overlay -->
+<div id="shopOverlay" class="hidden">
+  <div class="shop-panel">
+    <div class="shop-head">
+      <div class="shop-title">Boutique</div>
+      <button id="btnCloseShop" type="button" class="secondary">✕</button>
+    </div>
+
+    <div class="shop-topbar">
+      <div class="wallet">Meta XP: <b id="metaXPShop">0</b></div>
+    </div>
+
+    <div class="shop-tabs">
+      <button id="shopTabCursor" class="tab active" type="button">Poissons</button>
+      <button id="shopTabBoss" class="tab" type="button">Boss</button>
+    </div>
+
+    <div id="shopGrid" class="shop-grid"></div>
+  </div>
+</div>
+
 
       <!-- Actions -->
       <div class="actions">

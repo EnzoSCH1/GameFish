@@ -115,20 +115,27 @@ let equippedBoss = localStorage.getItem(LS_EQUIP_BOSS) || "boss_base";
 // placeholders (tu remplaceras src plus tard par tes vraies images)
 const CURSOR_SKINS = [
   { id:"cursor_base", name:"Classique", rarity:"common", oneIn: 1, src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_1", name:"Guppy", rarity:"common",    oneIn: 5,   src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_2", name:"Truite", rarity:"common",   oneIn: 5,   src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_3", name:"Sardine", rarity:"rare",    oneIn: 25,  src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_4", name:"Poisson-ange", rarity:"rare", oneIn: 25, src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_5", name:"Koi", rarity:"epic",       oneIn: 120, src:"assets/fish/skins/cursor.png" },
-  { id:"cursor_6", name:"Légendaire", rarity:"legendary", oneIn: 400, src:"assets/fish/skins/cursor.png" },
+  { id:"cursor_1", name:"Guppy", rarity:"common",    oneIn: 15,   src:"assets/fish/skins/cursor1.png" },
+  { id:"cursor_2", name:"Poisson-rouge", rarity:"common",   oneIn: 15,   src:"assets/fish/skins/cursor2.png" },
+  { id:"cursor_3", name:"Sardine", rarity:"common",    oneIn: 15,  src:"assets/fish/skins/cursor3.png" },
+  { id:"cursor_4", name:"Poisson-volant", rarity:"common", oneIn: 15, src:"assets/fish/skins/cursor4.png" },
+  { id:"cursor_5", name:"Poisson-ange", rarity:"rare", oneIn: 25, src:"assets/fish/skins/cursor5.png" },
+  { id:"cursor_6", name:"Poisson-globe", rarity:"rare",       oneIn: 25, src:"assets/fish/skins/cursor6.png" },
+  { id:"cursor_7", name:"Baliste", rarity:"rare",       oneIn: 25, src:"assets/fish/skins/cursor7.png" },
+  { id:"cursor_8", name:"Poisson-lune", rarity:"epic", oneIn: 300, src:"assets/fish/skins/cursor8.png" },
+  { id:"cursor_9", name:"Poisson-lion", rarity:"epic", oneIn: 300, src:"assets/fish/skins/cursor9.png" },
+  { id:"cursor_10", name:"Poisson-translucide", rarity:"legendary", oneIn: 650, src:"assets/fish/skins/cursor10.png" },
+  { id:"cursor_11", name:"Poisson-papier", rarity:"legendary", oneIn: 650, src:"assets/fish/skins/cursor11.png" },
 ];
 
 const BOSS_SKINS = [
   { id:"boss_base", name:"Classique", rarity:"common",  oneIn: 1,   src:"assets/fish/skins/boss.png" },
-  { id:"boss_1", name:"Requin", rarity:"common",     oneIn: 8,   src:"assets/fish/skins/boss.png" },
-  { id:"boss_2", name:"Requin bleu", rarity:"rare",  oneIn: 40,  src:"assets/fish/skins/boss.png" },
-  { id:"boss_3", name:"Mégalodon", rarity:"epic",    oneIn: 160, src:"assets/fish/skins/boss.png" },
-  { id:"boss_4", name:"Apex", rarity:"legendary",    oneIn: 600, src:"assets/fish/skins/boss.png" },
+  { id:"boss_1", name:"Requin-blanc", rarity:"common",     oneIn: 25,   src:"assets/fish/skins/boss1.png" },
+  { id:"boss_2", name:"Requin baleine", rarity:"rare",  oneIn: 55,  src:"assets/fish/skins/boss2.png" },
+  { id:"boss_3", name:"Mégalodon", rarity:"epic",    oneIn: 350, src:"assets/fish/skins/boss3.png" },
+  { id:"boss_4", name:"Apex", rarity:"epic",    oneIn: 350, src:"assets/fish/skins/boss4.png" },
+  { id:"boss_5", name:"Livyatan", rarity:"legendary",    oneIn: 600, src:"assets/fish/skins/boss5.png" },
+  { id:"boss_6", name:"Mosasaure", rarity:"legendary",    oneIn: 600, src:"assets/fish/skins/boss6.png" },
 ];
 
 function saveMeta(){
@@ -228,6 +235,138 @@ function addMetaXP(amount){
 
   saveMeta();
   renderMetaBar();
+  renderTabBadges();
+  updateAquariumBadge();
+}
+
+// =========================
+// SHOP (metaXP currency)
+// =========================
+const btnShop = document.getElementById("btnShop");
+const shopOverlay = document.getElementById("shopOverlay");
+const btnCloseShop = document.getElementById("btnCloseShop");
+const shopGrid = document.getElementById("shopGrid");
+const metaXPShop = document.getElementById("metaXPShop");
+
+const shopTabCursor = document.getElementById("shopTabCursor");
+const shopTabBoss = document.getElementById("shopTabBoss");
+
+let shopMode = "cursor"; // cursor | boss
+
+function openShop(){
+  if (!shopOverlay) return;
+  shopOverlay.classList.remove("hidden");
+  renderShop();
+}
+
+function closeShop(){
+  shopOverlay?.classList.add("hidden");
+}
+
+function getSkinPrice(skin){
+  // prix simple par rareté
+  const table = {
+    common:  150,
+    rare:    500,
+    epic:   1500,
+    legendary: 5000,
+  };
+  return table[skin.rarity] || 260;
+}
+
+function isUnlocked(id){
+  return unlockedSkins.has(id);
+}
+
+function renderShop(){
+  if (!shopGrid) return;
+
+  if (metaXPShop) metaXPShop.textContent = String(metaXP);
+
+  const list = shopMode === "cursor" ? CURSOR_SKINS : BOSS_SKINS;
+
+  shopGrid.innerHTML = "";
+
+  for (const skin of list){
+    // on ne vend pas les bases (toujours dispo)
+    if (skin.id === "cursor_base" || skin.id === "boss_base") continue;
+
+    const card = document.createElement("div");
+    card.className = `shop-card r-${skin.rarity}`;
+
+    const preview = document.createElement("div");
+    preview.className = "preview";
+    preview.style.backgroundImage = `url("${skin.src}")`;
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = skin.name;
+
+    const rarity = document.createElement("div");
+    rarity.className = "rarity";
+    rarity.textContent = `Rareté: ${skin.rarity}`;
+
+    const priceVal = getSkinPrice(skin);
+    const price = document.createElement("div");
+    price.className = "price";
+    price.textContent = `Prix: ${priceVal} metaXP`;
+
+    const btn = document.createElement("button");
+
+    if (!isUnlocked(skin.id)){
+      btn.textContent = "Acheter";
+      btn.disabled = metaXP < priceVal;
+      btn.onclick = () => {
+        if (metaXP < priceVal) return;
+        metaXP -= priceVal;
+        unlockedSkins.add(skin.id);
+        saveMeta();
+        renderMetaBar();
+        renderTabBadges();
+        updateAquariumBadge();
+        renderShop();
+      };
+    } else {
+      btn.textContent = "Équiper";
+      btn.disabled = false;
+      btn.onclick = () => {
+        if (shopMode === "cursor") equippedCursor = skin.id;
+        else equippedBoss = skin.id;
+
+        saveMeta();
+        applyEquippedSkins();
+        renderShop();
+      };
+    }
+
+    card.appendChild(preview);
+    card.appendChild(name);
+    card.appendChild(rarity);
+    card.appendChild(price);
+    card.appendChild(btn);
+
+    shopGrid.appendChild(card);
+  }
+}
+
+if (btnShop) btnShop.addEventListener("click", openShop);
+if (btnCloseShop) btnCloseShop.addEventListener("click", closeShop);
+
+if (shopTabCursor){
+  shopTabCursor.addEventListener("click", () => {
+    shopMode = "cursor";
+    shopTabCursor.classList.add("active");
+    shopTabBoss?.classList.remove("active");
+    renderShop();
+  });
+}
+if (shopTabBoss){
+  shopTabBoss.addEventListener("click", () => {
+    shopMode = "boss";
+    shopTabBoss.classList.add("active");
+    shopTabCursor?.classList.remove("active");
+    renderShop();
+  });
 }
 
 
@@ -486,7 +625,8 @@ function showOverlay(title, msg, mode){
     // prepare offers + reroll
     upgradeChosenThisWin = false;
     rerollCount = 0;
-
+    
+    closeShop();
     rollOffers();
     renderOffers();
 
@@ -507,7 +647,8 @@ function showOverlay(title, msg, mode){
     btnNext.style.display = "none";
     btnRetry.style.display = "inline-block";
     btnRetry.textContent = "Rejouer";
-
+    
+    closeShop();
     hideUpgradesBox();
     showOverlayActions();
 
@@ -742,12 +883,157 @@ const btnCloseSkins = document.getElementById("btnCloseSkins");
 function openAquarium(){
   if (!skinOverlay) return;
 
-  // marque tous les skins débloqués comme "vus"
-  for (const id of unlockedSkins) seenSkins.add(id);
-  saveMeta();
-  updateAquariumBadge();
+  // ✅ IMPORTANT : ne plus tout marquer comme "vu" ici
+  // On veut garder les notifs par onglet !
+
+  renderTabBadges();       // met les petits badges sur Poisson/Boss
+  renderSkinGrid();        // affiche les cartes
+  updateAquariumBadge();   // badge global (si tu le gardes)
 
   skinOverlay.classList.remove("hidden");
+}
+
+
+// ===== INVENTAIRE SKINS (Aquarium) =====
+const tabCursor = document.getElementById("tabCursor");
+const tabBoss = document.getElementById("tabBoss");
+const skinGrid = document.getElementById("skinGrid");
+
+let skinMode = "cursor"; // "cursor" | "boss"
+
+function isSkinUnlocked(id){
+  // les bases sont toujours disponibles
+  if (id === "cursor_base" || id === "boss_base") return true;
+  return unlockedSkins.has(id);
+}
+
+function getEquippedId(){
+  return skinMode === "cursor" ? equippedCursor : equippedBoss;
+}
+
+function setEquippedId(id){
+  if (skinMode === "cursor") equippedCursor = id;
+  else equippedBoss = id;
+
+  saveMeta();
+  applyEquippedSkins();
+  renderSkinGrid();
+}
+
+function renderSkinGrid(){
+  if (!skinGrid) return;
+
+  const list = skinMode === "cursor" ? CURSOR_SKINS : BOSS_SKINS;
+  const equippedId = getEquippedId();
+
+  skinGrid.innerHTML = "";
+
+  for (const skin of list){
+    const unlocked = isSkinUnlocked(skin.id);
+
+   const card = document.createElement("div");
+  card.className = `skin-card r-${skin.rarity}` + (unlocked ? "" : " locked");
+
+  const preview = document.createElement("div");
+  preview.className = "skin-preview";
+  preview.style.backgroundImage = `url("${skin.src}")`;
+
+  const name = document.createElement("div");
+  name.className = "skin-name";
+  name.textContent = skin.name;
+
+  const rarity = document.createElement("div");
+  rarity.className = "skin-rarity";
+  rarity.textContent = `Rareté: ${skin.rarity}`;
+
+  const actions = document.createElement("div");
+  actions.className = "skin-actions";
+
+  const btn = document.createElement("button");
+
+  if (!unlocked) {
+  btn.textContent = "Verrouillé";
+  btn.disabled = true;
+  } else if (skin.id === equippedId) {
+  btn.textContent = "Équipé ✅";
+  btn.disabled = true;
+  } else {
+  btn.textContent = "Équiper";
+  btn.onclick = () => setEquippedId(skin.id);
+  }
+
+  actions.appendChild(btn);
+
+  card.appendChild(preview);
+  card.appendChild(name);
+  card.appendChild(rarity);
+  card.appendChild(actions);
+
+  skinGrid.appendChild(card);
+
+  }
+}
+
+function isCursorSkin(id){
+  return CURSOR_SKINS.some(s => s.id === id);
+}
+function isBossSkin(id){
+  return BOSS_SKINS.some(s => s.id === id);
+}
+
+function getNewCountFor(type){
+  let count = 0;
+  for (const id of unlockedSkins){
+    if (seenSkins.has(id)) continue;
+
+    if (type === "cursor" && isCursorSkin(id)) count++;
+    if (type === "boss" && isBossSkin(id)) count++;
+  }
+  return count;
+}
+
+function renderTabBadges(){
+  const newCursor = getNewCountFor("cursor");
+  const newBoss = getNewCountFor("boss");
+
+  if (tabCursor){
+    tabCursor.innerHTML = `Poisson${newCursor > 0 ? ` <span class="tab-badge">${newCursor}</span>` : ""}`;
+  }
+  if (tabBoss){
+    tabBoss.innerHTML = `Boss${newBoss > 0 ? ` <span class="tab-badge">${newBoss}</span>` : ""}`;
+  }
+}
+
+// Onglets inventaire
+if (tabCursor){
+  tabCursor.addEventListener("click", () => {
+    skinMode = "cursor";
+    tabCursor.classList.add("active");
+    tabBoss?.classList.remove("active");
+    // ✅ marquer comme vus tous les skins poisson débloqués
+  for (const id of unlockedSkins){
+    if (isCursorSkin(id)) seenSkins.add(id);
+  }
+  saveMeta();
+
+  renderTabBadges();
+  renderSkinGrid();
+  });
+}
+if (tabBoss){
+  tabBoss.addEventListener("click", () => {
+    skinMode = "boss";
+    tabBoss.classList.add("active");
+    tabCursor?.classList.remove("active");
+    // ✅ marquer comme vus tous les skins boss débloqués
+  for (const id of unlockedSkins){
+    if (isBossSkin(id)) seenSkins.add(id);
+  }
+  saveMeta();
+
+  renderTabBadges();
+  renderSkinGrid();
+  });
 }
 
 function closeAquarium(){
