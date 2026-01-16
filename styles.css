@@ -783,11 +783,19 @@ body.game-running #metaUI{ display:flex; }
 }
 
 .skin-grid{
-  flex: 1;                    /* AJOUT */
-  min-height: 0;              /* AJOUT CRUCIAL */
-  overflow-y: auto;           /* AJOUT */
-  padding-right: 6px;         /* AJOUT */
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  /* scroll */
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+
+  /* IMPORTANT : pas de max-height ici */
+  padding-right: 6px;
 }
+
 
 /* Scrollbar discrète aquarium */
 .skin-grid::-webkit-scrollbar{
@@ -983,6 +991,44 @@ body.game-running #metaUI{ display:flex; }
 }
 .shop-card button:disabled{ opacity:.5; cursor:not-allowed; }
 
+/* ===== UI Premium Pack ===== */
+.shop-card{
+  position: relative;
+  overflow: hidden;
+}
+
+.shop-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.35);
+}
+
+/* Reflet verre */
+.shop-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(600px 220px at 30% 0%, rgba(255,255,255,0.16), transparent 55%);
+}
+
+/* Glow rareté */
+.shop-card::after{
+  content:"";
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:10px;
+  height:3px;
+  border-radius:999px;
+}
+
+.r-common::after{ background: rgba(255,255,255,0.25); }
+.r-rare::after{ background: rgba(60,180,255,0.65); }
+.r-epic::after{ background: rgba(180,90,255,0.7); }
+.r-legendary::after{ background: rgba(255,210,80,0.75); }
+
+
 /* =========================================
    Boutique scrollable (si trop de skins)
 ========================================= */
@@ -1005,6 +1051,37 @@ body.game-running #metaUI{ display:flex; }
 .shop-grid::-webkit-scrollbar-track{
   background: rgba(0,0,0,0.15);
 }
+
+/* ===== Badge compteur onglets (Poisson / Boss) ===== */
+.tab{
+  position: relative; /* nécessaire pour positionner le badge */
+}
+
+.tab .count{
+  position: absolute;
+  top: -6px;
+  right: -6px;
+
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 12px;
+  font-weight: 900;
+  color: white;
+
+  background: rgba(255, 80, 120, 0.95); 
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+
 
 @media (max-width: 600px){
   .shop-grid{

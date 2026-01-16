@@ -934,6 +934,13 @@ function renderSkinGrid(){
    const card = document.createElement("div");
   card.className = `skin-card r-${skin.rarity}` + (unlocked ? "" : " locked");
 
+  // NEW badge si débloqué mais pas vu
+if (unlocked && !seenSkins.has(skin.id)) {
+  const nb = document.createElement("div");
+  nb.className = "new-badge";
+  nb.textContent = "NEW";
+  card.appendChild(nb);
+}
   const preview = document.createElement("div");
   preview.className = "skin-preview";
   preview.style.backgroundImage = `url("${skin.src}")`;
