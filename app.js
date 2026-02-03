@@ -4,6 +4,8 @@
 // XP + upgrades = RUN ONLY (reset on lose)
 // =========================
 
+import { saveToCloud, loadFromCloud, getUserId, submitScore, getLeaderboard, getUsername, setUsername, saveUsernameToCloud, checkUsernameExists } from './firebase.js';
+
 // ---------- DOM ----------
 const layers = [...document.querySelectorAll(".layer")];
 const bubblesEl = document.getElementById("bubbles");
@@ -32,6 +34,9 @@ const btnStart = document.getElementById("btnStart");
 const btnReset = document.getElementById("btnReset");
 const btnNext  = document.getElementById("btnNext");
 const btnRetry = document.getElementById("btnRetry");
+const topLeaderboard = document.getElementById("topLeaderboard");
+const topLeaderboardList = document.getElementById("topLeaderboardList");
+let currentLeaderboardMode = 'normal';
 
 const soundToggle = document.getElementById("soundToggle");
 
@@ -41,6 +46,18 @@ const overlayMsg = document.getElementById("overlayMsg");
 const rulesBox = document.getElementById("rules");
 const statsBox = document.getElementById("stats");
 const actionsEl = overlay ? overlay.querySelector(".actions") : null;
+
+const tutorialOverlay = document.getElementById("tutorialOverlay");
+const tutorialTitle = document.getElementById("tutorialTitle");
+const tutorialMsg = document.getElementById("tutorialMsg");
+const btnTutorialNext = document.getElementById("btnTutorialNext");
+const btnSkipTutorial = document.getElementById("btnSkipTutorial");
+const tutorialHand = document.getElementById("tutorialHand");
+
+// Mode buttons
+const btnNormal = document.getElementById("btnNormal");
+const btnEndless = document.getElementById("btnEndless");
+const btnTimeAttack = document.getElementById("btnTimeAttack");
 
 // stats fields
 const stTotal = document.getElementById("stTotal");
@@ -52,6 +69,49 @@ const stMalus = document.getElementById("stMalus");
 const stPower = document.getElementById("stPower");
 const stBossHits = document.getElementById("stBossHits");
 const stMaxCombo = document.getElementById("stMaxCombo");
+
+// Health display
+const healthEl = document.getElementById("health");
+const healthDisplay = document.getElementById("healthDisplay");
+
+// Blood overlay
+const bloodLayer = document.getElementById("bloodLayer");
+
+function createBloodDrops(count = 18){
+  if (!bloodLayer) return;
+  bloodLayer.innerHTML = "";
+
+  for (let i = 0; i < count; i++){
+    const drop = document.createElement("div");
+    drop.className = "blood-drop";
+
+    const x = Math.random() * 100;
+    const w = 12 + Math.random() * 18;
+    const h = 28 + Math.random() * 38;
+    const duration = 2.6 + Math.random() * 2.6;
+    const delay = -Math.random() * duration;
+
+    drop.style.setProperty("--x", `${x}vw`);
+    drop.style.setProperty("--w", `${w}px`);
+    drop.style.setProperty("--h", `${h}px`);
+    drop.style.setProperty("--duration", `${duration}s`);
+    drop.style.setProperty("--delay", `${delay}s`);
+
+    bloodLayer.appendChild(drop);
+  }
+}
+
+function enableBloodDrops(){
+  if (!bloodLayer) return;
+  if (!bloodLayer.children.length) createBloodDrops();
+  bloodLayer.classList.remove("hidden");
+}
+
+function disableBloodDrops(){
+  if (!bloodLayer) return;
+  bloodLayer.classList.add("hidden");
+  bloodLayer.innerHTML = "";
+}
 
 // upgrades UI
 const upgradesBox = document.getElementById("upgrades");
@@ -90,19 +150,69 @@ const dashTimeMax = 0.25;
 // Boss
 const bossRadius = 95;
 
+// ---------- GAME OPTIONS (persistent) ----------
+const LS_BOSS_SPEED = "sea_boss_speed_mul";
+const LS_TIME_MUL = "sea_time_multiplier";
+const LS_PARALLAX_ON = "sea_parallax_enabled";
+const LS_CAUSTICS_ON = "sea_caustics_enabled";
+const LS_SWIMMERS_ON = "sea_swimmers_enabled";
+
+let bossSpeedMultiplier = Number(localStorage.getItem(LS_BOSS_SPEED) || "1.0");
+let timeMultiplier = Number(localStorage.getItem(LS_TIME_MUL) || "1.0");
+let parallaxEnabled = localStorage.getItem(LS_PARALLAX_ON) !== "false";
+let causticsEnabled = localStorage.getItem(LS_CAUSTICS_ON) !== "false";
+let swimmersEnabled = localStorage.getItem(LS_SWIMMERS_ON) !== "false";
+
+function saveGameOptions(){
+  localStorage.setItem(LS_BOSS_SPEED, String(bossSpeedMultiplier));
+  localStorage.setItem(LS_TIME_MUL, String(timeMultiplier));
+  localStorage.setItem(LS_PARALLAX_ON, String(parallaxEnabled));
+  localStorage.setItem(LS_CAUSTICS_ON, String(causticsEnabled));
+  localStorage.setItem(LS_SWIMMERS_ON, String(swimmersEnabled));
+  applyVisualOptions();
+}
+
+function applyVisualOptions(){
+  const layers = [...document.querySelectorAll(".layer")];
+  layers.forEach(l => l.style.opacity = parallaxEnabled ? "1" : "0");
+  
+  const caustics = document.getElementById("caustics");
+  if (caustics) caustics.style.display = causticsEnabled ? "block" : "none";
+  
+  const swimmers = document.getElementById("swimmers");
+  if (swimmers) swimmers.style.display = swimmersEnabled ? "block" : "none";
+}
+
+// Enemy
+const enemyRadius = 35;
+const enemySpeed = 80;
+const enemySlowDuration = 2.0; // secondes de ralentissement
+
+// Game modes
+const GAME_MODES = {
+  normal: 'normal',
+  endless: 'endless',
+  timeAttack: 'time_attack'
+};
+
 // =========================
 // META XP + SKINS (persistant)
 // =========================
 const LS_META_XP = "sea_meta_xp";
 const LS_META_MAX = "sea_meta_xp_max";
+const LS_TOTAL_XP = "sea_total_xp"; // XP total pour la boutique (ne diminue jamais sauf achat)
 const LS_UNLOCKED_SKINS = "sea_unlocked_skins";
 const LS_SEEN_SKINS = "sea_seen_skins";
 const LS_EQUIP_CURSOR = "sea_equip_cursor";
 const LS_EQUIP_BOSS = "sea_equip_boss";
+const LS_FIRST_TIME = "sea_first_time";
 
-// barre meta
+// barre meta (reset quand elle se remplit)
 let metaXP = Number(localStorage.getItem(LS_META_XP) || "0");
 let metaXPMax = Number(localStorage.getItem(LS_META_MAX) || "350"); // départ 350
+
+// XP total accumulé (monnaie pour la boutique, ne diminue que lors d'achats)
+let totalXP = Number(localStorage.getItem(LS_TOTAL_XP) || "0");
 
 // inventaire
 let unlockedSkins = new Set(JSON.parse(localStorage.getItem(LS_UNLOCKED_SKINS) || "[]"));
@@ -111,6 +221,39 @@ let seenSkins = new Set(JSON.parse(localStorage.getItem(LS_SEEN_SKINS) || "[]"))
 // équipé
 let equippedCursor = localStorage.getItem(LS_EQUIP_CURSOR) || "cursor_base";
 let equippedBoss = localStorage.getItem(LS_EQUIP_BOSS) || "boss_base";
+
+let isFirstTime = !localStorage.getItem(LS_FIRST_TIME);
+let tutorialStep = 0;
+let tutorialMode = false;
+let tutorialCanEat = false;
+let tutorialCanDash = false;
+
+// Charger depuis le cloud si disponible
+async function loadCloudData() {
+  const userId = getUserId();
+  const cloudData = await loadFromCloud(userId);
+  if (cloudData) {
+    metaXP = cloudData.metaXP || metaXP;
+    metaXPMax = cloudData.metaXPMax || metaXPMax;
+    totalXP = cloudData.totalXP || totalXP;
+    unlockedSkins = new Set(cloudData.unlockedSkins || []);
+    seenSkins = new Set(cloudData.seenSkins || []);
+    equippedCursor = cloudData.equippedCursor || equippedCursor;
+    equippedBoss = cloudData.equippedBoss || equippedBoss;
+    bestScore = cloudData.bestScore || bestScore;
+    // Mettre à jour localStorage
+    localStorage.setItem(LS_META_XP, String(metaXP));
+    localStorage.setItem(LS_META_MAX, String(metaXPMax));
+    localStorage.setItem(LS_TOTAL_XP, String(totalXP));
+    localStorage.setItem(LS_UNLOCKED_SKINS, JSON.stringify([...unlockedSkins]));
+    localStorage.setItem(LS_SEEN_SKINS, JSON.stringify([...seenSkins]));
+    localStorage.setItem(LS_EQUIP_CURSOR, equippedCursor);
+    localStorage.setItem(LS_EQUIP_BOSS, equippedBoss);
+    localStorage.setItem(LS_BEST, String(bestScore));
+    console.log('Données chargées depuis le cloud');
+  }
+}
+loadCloudData();
 
 // placeholders (tu remplaceras src plus tard par tes vraies images)
 const CURSOR_SKINS = [
@@ -141,10 +284,25 @@ const BOSS_SKINS = [
 function saveMeta(){
   localStorage.setItem(LS_META_XP, String(metaXP));
   localStorage.setItem(LS_META_MAX, String(metaXPMax));
+  localStorage.setItem(LS_TOTAL_XP, String(totalXP));
   localStorage.setItem(LS_UNLOCKED_SKINS, JSON.stringify([...unlockedSkins]));
   localStorage.setItem(LS_SEEN_SKINS, JSON.stringify([...seenSkins]));
   localStorage.setItem(LS_EQUIP_CURSOR, equippedCursor);
   localStorage.setItem(LS_EQUIP_BOSS, equippedBoss);
+
+  // Sauvegarde cloud
+  const userId = getUserId();
+  const data = {
+    metaXP,
+    metaXPMax,
+    totalXP,
+    unlockedSkins: [...unlockedSkins],
+    seenSkins: [...seenSkins],
+    equippedCursor,
+    equippedBoss,
+    bestScore
+  };
+  saveToCloud(userId, data);
 }
 
 // UI meta
@@ -215,6 +373,7 @@ function tryUnlockOneSkin(){
 // Ajout de meta XP ; si barre pleine -> unlock
 function addMetaXP(amount){
   metaXP += amount;
+  totalXP += amount; // Ajouter aussi au total qui ne se reset jamais
 
   // boucle si tu remplis plusieurs fois d’un coup
   while (metaXP >= metaXPMax){
@@ -281,7 +440,7 @@ function isUnlocked(id){
 function renderShop(){
   if (!shopGrid) return;
 
-  if (metaXPShop) metaXPShop.textContent = String(metaXP);
+  if (metaXPShop) metaXPShop.textContent = String(totalXP); // Utiliser totalXP pour l'affichage
 
   const list = shopMode === "cursor" ? CURSOR_SKINS : BOSS_SKINS;
 
@@ -315,10 +474,10 @@ function renderShop(){
 
     if (!isUnlocked(skin.id)){
       btn.textContent = "Acheter";
-      btn.disabled = metaXP < priceVal;
+      btn.disabled = totalXP < priceVal; // Vérifier avec totalXP
       btn.onclick = () => {
-        if (metaXP < priceVal) return;
-        metaXP -= priceVal;
+        if (totalXP < priceVal) return; // Vérifier avec totalXP
+        totalXP -= priceVal; // Déduire de totalXP
         unlockedSkins.add(skin.id);
         saveMeta();
         renderMetaBar();
@@ -369,6 +528,61 @@ if (shopTabBoss){
   });
 }
 
+// ---------- Mode selection ----------
+function setGameMode(mode) {
+  gameMode = mode;
+  // Update button active state
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  if (mode === GAME_MODES.normal) btnNormal?.classList.add('active');
+  else if (mode === GAME_MODES.endless) btnEndless?.classList.add('active');
+  else if (mode === GAME_MODES.timeAttack) btnTimeAttack?.classList.add('active');
+  
+  // Update top leaderboard
+  updateTopLeaderboard(mode);
+}
+
+// Mode selection
+if (btnNormal) btnNormal.addEventListener("click", () => setGameMode(GAME_MODES.normal));
+if (btnEndless) btnEndless.addEventListener("click", () => setGameMode(GAME_MODES.endless));
+if (btnTimeAttack) btnTimeAttack.addEventListener("click", () => setGameMode(GAME_MODES.timeAttack));
+
+// ---------- Initialize game for mode ----------
+function initializeGameForMode() {
+  if (gameMode === GAME_MODES.timeAttack) {
+    timeLeft = 60; // 60 seconds for time attack
+    level = 1;
+    score = 0;
+    target = 15;
+    health = maxHealth; // not used
+  } else if (gameMode === GAME_MODES.endless) {
+    timeLeft = 9999; // effectively infinite
+    level = 1;
+    score = 0;
+    target = 150; // affichage visuel pour les upgrades
+    health = maxHealth;
+    endlessUpgradeCounter = 0; // reset upgrade counter
+  } else { // normal
+    timeLeft = 30;
+    level = 1;
+    score = 0;
+    target = 15;
+    health = maxHealth; // not used
+  }
+  totalScore = 0;
+  combo = 1;
+  eatenFood = 0;
+  takenBonus = 0;
+  takenMalus = 0;
+  takenPower = 0;
+  bossHits = 0;
+  maxCombo = 1;
+  
+  // Configure level and init boss
+  configureLevel();
+  initBoss();
+  
+  syncHUD();
+}
 
 // ---------- RUN ONLY PROGRESS ----------
 let runXP = 0;
@@ -401,6 +615,29 @@ let currentOffers = [];
 
 // ---------- GAME STATE ----------
 let running = false;
+let wasRunningBeforeHide = false;
+let wasRunningBeforeOptions = false;
+
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden){
+    if (running){
+      wasRunningBeforeHide = true;
+      running = false;
+      setRunningUI(false);
+    }
+  } else if (wasRunningBeforeHide){
+    wasRunningBeforeHide = false;
+    running = true;
+    setRunningUI(true);
+    btnStart.textContent = "Pause";
+    lastFrame = 0;
+    bubbleLoop();
+    swimmersLoop();
+    requestAnimationFrame(frame);
+  }
+});
 
 let level = 1;
 let score = 0;
@@ -429,12 +666,38 @@ let takenPower = 0;
 let bossHits = 0;
 let maxCombo = 1;
 
+// Game mode
+let gameMode = GAME_MODES.normal;
+
+// Health for endless mode
+let health = 100;
+const maxHealth = 100;
+
+// Endless mode upgrades
+let endlessUpgradeCounter = 0; // Compte les nourritures pour les upgrades
+const ENDLESS_UPGRADE_INTERVAL = 150; // Upgrade tous les 150 nourritures
+
+// Random events
+let currentEvent = null;
+let eventTimer = 0;
+const EVENT_INTERVAL = 15; // seconds between potential events
+const EVENT_DURATION = 8; // seconds
+let currentVX = 0; // courant marin X (DEPRECATED)
+let currentVY = 0; // courant marin Y (DEPRECATED)
+let tideOffset = 0; // marée offset
+let tideDirection = 1; // marée direction (1 ou -1)
+let planktonActive = false; // plancton lumineux actif
+let bossSpeedBoost = 1.0; // multiplicateur de vitesse du boss pour soif de sang
+
 // Power-up state
 let dashCooldown = 0;
 let dashCooldownMax = 3.0;
 let dashTime = 0;
 
 let magnetTime = 0;
+
+// Slow effect from enemy
+let slowTime = 0;
 
 // Boss movement state
 let bossActive = false;
@@ -443,6 +706,12 @@ let bossSpeed = 200;
 let bossVX = 0, bossVY = 0;
 let bossMaxAccel = 550;
 let lastBossHitAt = 0;
+
+// Enemy state
+let enemies = []; // array of {x, y, vx, vy, el}
+
+// Boss invisibility state
+let bossInvisible = false;
 
 // Confetti bubbles flag
 let confettiBurstActive = false;
@@ -515,6 +784,13 @@ function showOverlayActions(){
 
 function showUpgradesBox(){
   upgradesBox?.classList.remove("hidden");
+  
+  // Arrêter la tempête si elle est en cours
+  if (currentEvent === 'storm') {
+    document.body.classList.remove('storm');
+    currentEvent = null;
+    eventTimer = EVENT_INTERVAL + Math.random() * 10;
+  }
 }
 
 function hideUpgradesBox(){
@@ -536,6 +812,23 @@ function resetRunProgress(){
   rerollCount = 0;
   currentOffers = [];
 
+  // Clear enemies
+  for (const enemy of enemies) enemy.el.remove();
+  enemies = [];
+  slowTime = 0;
+
+  // Reset event - remove ALL event classes
+  currentEvent = null;
+  eventTimer = 0;
+  bossInvisible = false;
+  document.body.classList.remove('storm', 'bloodlust', 'tide', 'plankton', 'murky', 'attack-surprise');
+  
+  // Remove damage flash overlay
+  const damageFlash = document.getElementById("damageFlash");
+  if (damageFlash) {
+    damageFlash.classList.remove("active");
+  }
+
   hideUpgradesBox();
   updateRerollButton();
   renderOffers(); // safe even if no offers
@@ -545,7 +838,14 @@ function resetRunProgress(){
 function renderStats(){
   if (!statsBox) return;
   stTotal.textContent = totalScore;
-  stBest.textContent = bestScore;
+  // Show high score for current mode
+  let highScore = bestScore; // default
+  if (gameMode === GAME_MODES.timeAttack) {
+    highScore = parseInt(localStorage.getItem('highscore_timeAttack') || '0');
+  } else if (gameMode === GAME_MODES.endless) {
+    highScore = parseInt(localStorage.getItem('highscore_endless') || '0');
+  }
+  stBest.textContent = highScore;
   stLevel.textContent = level;
   stFood.textContent = eatenFood;
   stBonus.textContent = takenBonus;
@@ -557,13 +857,35 @@ function renderStats(){
 
 function syncHUD(){
   levelEl.textContent = level;
-  scoreEl.textContent = score;
-  targetEl.textContent = target;
+  
+  // En mode endless, afficher le compteur de nourritures pour l'upgrade
+  if (gameMode === GAME_MODES.endless) {
+    scoreEl.textContent = endlessUpgradeCounter;
+    targetEl.textContent = ENDLESS_UPGRADE_INTERVAL;
+  } else {
+    scoreEl.textContent = score;
+    targetEl.textContent = target;
+  }
+  
   timeEl.textContent = timeLeft.toFixed(1);
   comboEl.textContent = `x${combo}`;
 
   totalEl.textContent = totalScore;
   bestEl.textContent = bestScore;
+
+  // Health display for endless mode
+  if (gameMode === GAME_MODES.endless) {
+    healthEl.textContent = health;
+    healthDisplay.style.display = 'block';
+    // Update health bar
+    const healthBar = document.getElementById('healthBar');
+    if (healthBar) {
+      const healthPercent = (health / maxHealth) * 100;
+      healthBar.style.width = healthPercent + '%';
+    }
+  } else {
+    healthDisplay.style.display = 'none';
+  }
 
   // ✅ BARRE DE DASH (0 → vide / 1 → prêt)
   if (dashCooldownFill){
@@ -622,6 +944,7 @@ function showOverlay(title, msg, mode){
   if (btnSkipUpgrade) btnSkipUpgrade.classList.add("hidden");
 
   if (mode === "win"){
+    overlay.classList.remove("lose");
     // prepare offers + reroll
     upgradeChosenThisWin = false;
     rerollCount = 0;
@@ -644,6 +967,7 @@ function showOverlay(title, msg, mode){
 
   } else {
     // lose
+    overlay.classList.add("lose");
     btnNext.style.display = "none";
     btnRetry.style.display = "inline-block";
     btnRetry.textContent = "Rejouer";
@@ -832,12 +1156,16 @@ function applyOffer(offer){
   hideOverlay();
   hideStatsBox();
 
-  level++;
+  // En mode endless, on ne monte pas de niveau
+  if (gameMode !== GAME_MODES.endless) {
+    level++;
+  }
   configureLevel();
 
   running = true;
   btnStart.textContent = "Pause";
   setRunningUI(true);
+  setJoystickVisibility(true);
 
   lastFrame = 0;
   bubbleLoop();
@@ -861,13 +1189,16 @@ if (btnSkipUpgrade){
     hideOverlay();
     hideStatsBox();
 
-    // ✅ passe au niveau suivant DIRECTEMENT
-    level++;
+    // ✅ passe au niveau suivant DIRECTEMENT (sauf en endless)
+    if (gameMode !== GAME_MODES.endless) {
+      level++;
+    }
     configureLevel();
 
     running = true;
     btnStart.textContent = "Pause";
     setRunningUI(true);
+    setJoystickVisibility(true);
 
     lastFrame = 0;
     bubbleLoop();
@@ -882,9 +1213,6 @@ const btnCloseSkins = document.getElementById("btnCloseSkins");
 
 function openAquarium(){
   if (!skinOverlay) return;
-
-  // ✅ IMPORTANT : ne plus tout marquer comme "vu" ici
-  // On veut garder les notifs par onglet !
 
   renderTabBadges();       // met les petits badges sur Poisson/Boss
   renderSkinGrid();        // affiche les cartes
@@ -934,13 +1262,14 @@ function renderSkinGrid(){
    const card = document.createElement("div");
   card.className = `skin-card r-${skin.rarity}` + (unlocked ? "" : " locked");
 
-  // NEW badge si débloqué mais pas vu
-if (unlocked && !seenSkins.has(skin.id)) {
-  const nb = document.createElement("div");
-  nb.className = "new-badge";
-  nb.textContent = "NEW";
-  card.appendChild(nb);
-}
+  // NEW badge si débloqué mais pas vu (hors skins de base)
+  const isBase = skin.id === "cursor_base" || skin.id === "boss_base";
+  if (!isBase && unlocked && !seenSkins.has(skin.id)) {
+    const nb = document.createElement("div");
+    nb.className = "new-badge";
+    nb.textContent = "NEW";
+    card.appendChild(nb);
+  }
   const preview = document.createElement("div");
   preview.className = "skin-preview";
   preview.style.backgroundImage = `url("${skin.src}")`;
@@ -966,7 +1295,10 @@ if (unlocked && !seenSkins.has(skin.id)) {
   btn.disabled = true;
   } else {
   btn.textContent = "Équiper";
-  btn.onclick = () => setEquippedId(skin.id);
+  btn.onclick = () => {
+    markSkinSeen(skin.id);
+    setEquippedId(skin.id);
+  };
   }
 
   actions.appendChild(btn);
@@ -976,8 +1308,23 @@ if (unlocked && !seenSkins.has(skin.id)) {
   card.appendChild(rarity);
   card.appendChild(actions);
 
+  // Click anywhere on card marks skin as seen
+  card.addEventListener('click', () => {
+    markSkinSeen(skin.id);
+  });
+
   skinGrid.appendChild(card);
 
+  }
+}
+
+function markSkinSeen(id){
+  if (!seenSkins.has(id)){
+    seenSkins.add(id);
+    saveMeta();
+    renderTabBadges();
+    renderSkinGrid();
+    updateAquariumBadge();
   }
 }
 
@@ -1017,11 +1364,6 @@ if (tabCursor){
     skinMode = "cursor";
     tabCursor.classList.add("active");
     tabBoss?.classList.remove("active");
-    // ✅ marquer comme vus tous les skins poisson débloqués
-  for (const id of unlockedSkins){
-    if (isCursorSkin(id)) seenSkins.add(id);
-  }
-  saveMeta();
 
   renderTabBadges();
   renderSkinGrid();
@@ -1032,11 +1374,6 @@ if (tabBoss){
     skinMode = "boss";
     tabBoss.classList.add("active");
     tabCursor?.classList.remove("active");
-    // ✅ marquer comme vus tous les skins boss débloqués
-  for (const id of unlockedSkins){
-    if (isBossSkin(id)) seenSkins.add(id);
-  }
-  saveMeta();
 
   renderTabBadges();
   renderSkinGrid();
@@ -1060,7 +1397,13 @@ function updateParallax(){
   layers.forEach(layer => {
     const depth = Number(layer.dataset.depth || "0.1");
     const px = -dx * 55 * depth * 10;
-    const py = -dy * 40 * depth * 10;
+    let py = -dy * 40 * depth * 10;
+    
+    // Appliquer l'effet de marée
+    if (currentEvent === 'tide') {
+      py += tideOffset * depth * 50;
+    }
+    
     layer.style.transform = `translate3d(${px}px, ${py}px, 0)`;
   });
 }
@@ -1068,13 +1411,19 @@ function updateParallax(){
 // ---------- Cursor follow ----------
 function updateCursor(){
   const baseFollow = dashTime > 0 ? 0.42 : 0.18;
-  const follow = Math.min(0.78, baseFollow + runUpSpeed * 0.015);
+  let follow = Math.min(0.78, baseFollow + runUpSpeed * 0.015);
+
+  // Apply slow effect
+  if (slowTime > 0) follow *= 0.5; // half speed
 
   const prevX = x;
   const prevY = y;
 
-  x += (mouseX - x) * follow;
-  y += (mouseY - y) * follow;
+  const targetX = joystickActive ? (window.innerWidth / 2 + joystickX * 180) : mouseX;
+  const targetY = joystickActive ? (window.innerHeight / 2 + joystickY * 180) : mouseY;
+
+  x += (targetX - x) * follow;
+  y += (targetY - y) * follow;
 
   const vx = x - prevX;
   const vy = y - prevY;
@@ -1137,6 +1486,15 @@ function spawnPowerUp(){
   );
 }
 
+function spawnEnemy(){
+  const pad = 50;
+  const ex = Math.random() * (window.innerWidth - pad*2) + pad;
+  const ey = Math.random() * (window.innerHeight - pad*2) + pad;
+  const el = createEntity("enemy", ex, ey);
+  const enemy = { x: ex, y: ey, vx: 0, vy: 0, el };
+  enemies.push(enemy);
+}
+
 // ---------- Magnet ----------
 function applyMagnet(){
   if (magnetTime <= 0) return;
@@ -1165,8 +1523,30 @@ function applyMagnet(){
   }
 }
 
+// ---------- Tide effect on entities ----------
+function applyTideEffect(){
+  if (currentEvent !== 'tide') return;
+
+  const entities = [...entitiesEl.querySelectorAll(".entity")];
+  for (const el of entities) {
+    const baseTop = Number(el.dataset.baseTop || el.style.top.replace('px', ''));
+    if (!el.dataset.baseTop) {
+      el.dataset.baseTop = baseTop;
+    }
+    
+    // Appliquer un mouvement vertical fort basé sur l'offset de marée
+    const offset = tideOffset * 80; // Multiplier pour un effet plus important
+    el.style.top = `${baseTop + offset}px`;
+  }
+}
+
+// Dans applyMagnet, avant la fin de la fonction:
+// (note: le code qui suit existait déjà)
+
 // ---------- Eat detection ----------
 function checkEat(){
+  if (tutorialMode && !tutorialCanEat) return;
+
   const mouthX = x + 22;
   const mouthY = y;
   const now = performance.now();
@@ -1190,7 +1570,11 @@ function checkEat(){
         else combo = 1;
         lastEatAt = now;
 
-        const gained = combo;
+        let gained = combo;
+        // Plancton lumineux double les points
+        if (planktonActive) {
+          gained *= 2;
+        }
         score += gained;
         totalScore += gained;
 
@@ -1200,15 +1584,27 @@ function checkEat(){
         runXP += 1;
         addMetaXP(1); // chaque nourriture donne un peu d'XP meta
         playMiam();
+        spawnParticles(ex, ey, 'bubble', 3);
 
         if (totalScore > bestScore){
           bestScore = totalScore;
           localStorage.setItem(LS_BEST, String(bestScore));
         }
 
-        if (score >= target){
-          winLevel();
-          return;
+        // En mode endless: upgrade tous les 150 nourritures
+        if (gameMode === GAME_MODES.endless) {
+          endlessUpgradeCounter++;
+          if (endlessUpgradeCounter >= ENDLESS_UPGRADE_INTERVAL) {
+            endlessUpgradeCounter = 0;
+            winLevel();
+            return;
+          }
+        } else {
+          // Pour les autres modes: système normal score >= target
+          if (score >= target){
+            winLevel();
+            return;
+          }
         }
 
         if (entitiesEl.querySelectorAll(".food").length < 10){
@@ -1221,25 +1617,34 @@ function checkEat(){
         takenBonus++;
         runXP += 2;
         playBonus();
+        spawnParticles(ex, ey, 'spark', 5);
       }
 
       if (kind === "malus"){
         takenMalus++;
         combo = 1;
-        timeLeft = Math.max(0, timeLeft - (4.5 + level * 0.35));
+        if (gameMode === GAME_MODES.endless) {
+          health = Math.max(0, health - 20); // reduce health in endless
+        } else {
+          timeLeft = Math.max(0, timeLeft - (4.5 + level * 0.35));
+        }
         playOuch();
+        spawnParticles(ex, ey, 'bubble', 2); // or different
+        triggerDamageFlash();
       }
 
       if (kind === "power-dash"){
         takenPower++;
         dashCooldown = Math.max(0, dashCooldown - 1.2);
         playBonus();
+        spawnParticles(ex, ey, 'spark', 4);
       }
 
       if (kind === "power-magnet"){
         takenPower++;
         magnetTime = Math.max(magnetTime, magnetMax);
         playBonus();
+        spawnParticles(ex, ey, 'spark', 4);
       }
 
       syncHUD();
@@ -1249,7 +1654,8 @@ function checkEat(){
 
 // ---------- Boss init + follow ----------
 function initBoss(){
-  bossActive = level >= 4;
+  // Endless: boss appears immediately, Normal/TimeAttack: level >= 4
+  bossActive = (gameMode === GAME_MODES.endless) || level >= 4;
 
   if (!bossActive){
     bossEl.style.left = "-9999px";
@@ -1268,7 +1674,7 @@ function initBoss(){
   bossVX = 0;
   bossVY = 0;
 
-  bossSpeed = 160 + level * 18;
+  bossSpeed = (160 + level * 18) * bossSpeedMultiplier;
   bossMaxAccel = 520 + level * 28;
 
   bossEl.style.left = `${bossX}px`;
@@ -1296,14 +1702,19 @@ function updateBoss(dt){
   dx /= dist;
   dy /= dist;
 
-  const desiredVX = dx * bossSpeed;
-  const desiredVY = dy * bossSpeed;
+  const desiredVX = dx * bossSpeed * bossSpeedBoost; // Appliquer le boost de vitesse
+  const desiredVY = dy * bossSpeed * bossSpeedBoost;
 
   let ax = desiredVX - bossVX;
   let ay = desiredVY - bossVY;
 
   const aLen = Math.hypot(ax, ay) || 1;
-  const maxA = bossMaxAccel * dt;
+  
+  // Augmenter l'accélération pendant le boost de sang pour rester très précis
+  let maxA = bossMaxAccel * dt;
+  if (currentEvent === 'bloodlust') {
+    maxA *= 5; // Accélération 5x plus rapide pour suivre très précisément avec le boost
+  }
 
   if (aLen > maxA){
     ax = (ax / aLen) * maxA;
@@ -1339,19 +1750,111 @@ function updateBoss(dt){
 
     bossHits++;
     combo = 1;
-    timeLeft = Math.max(0, timeLeft - (5.5 + level * 0.4));
+    if (gameMode === GAME_MODES.endless) {
+      health = Math.max(0, health - 15); // reduce health in endless
+    } else {
+      timeLeft = Math.max(0, timeLeft - (5.5 + level * 0.4));
+    }
     playOuch();
     syncHUD();
+    triggerDamageFlash();
+  }
+}
+
+function updateEnemies(dt){
+  for (let i = enemies.length - 1; i >= 0; i--){
+    const enemy = enemies[i];
+    const dx = x - enemy.x;
+    const dy = y - enemy.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    // Move towards player
+    enemy.vx = (dx / dist) * enemySpeed;
+    enemy.vy = (dy / dist) * enemySpeed;
+
+    enemy.x += enemy.vx * dt;
+    enemy.y += enemy.vy * dt;
+
+    enemy.el.style.left = `${enemy.x}px`;
+    enemy.el.style.top = `${enemy.y}px`;
+
+    // Check collision with player
+    if (dist < playerRadiusBase + enemyRadius){
+      // Hit: slow player
+      slowTime = Math.max(slowTime, enemySlowDuration);
+      enemy.el.remove();
+      enemies.splice(i, 1);
+      playOuch(); // reuse sound
+      spawnParticles(enemy.x, enemy.y, 'bubble', 3);
+      triggerDamageFlash();
+    }
   }
 }
 
 // ---------- Confetti bubbles burst ----------
+const isCoarsePointer = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+const MAX_BUBBLES = prefersReducedMotion ? (isCoarsePointer ? 16 : 34) : (isCoarsePointer ? 28 : 60);
+const MAX_SWIMMERS = prefersReducedMotion ? (isCoarsePointer ? 2 : 4) : (isCoarsePointer ? 3 : 6);
+const MAX_POOL_BUBBLES = 80;
+const MAX_POOL_SWIMMERS = 8;
+
+const bubblePool = [];
+const swimmerPool = [];
+let activeBubbles = 0;
+let activeSwimmers = 0;
+
+function getBubbleEl(){
+  let el = bubblePool.pop();
+  if (!el){
+    el = document.createElement("div");
+    el.className = "bubble";
+    el.addEventListener("animationend", () => recycleBubble(el));
+  }
+  return el;
+}
+
+function recycleBubble(el){
+  if (el.isConnected) el.remove();
+  activeBubbles = Math.max(0, activeBubbles - 1);
+  if (bubblePool.length < MAX_POOL_BUBBLES) bubblePool.push(el);
+}
+
+function resetBubbleAnimation(el){
+  el.style.animation = "none";
+  void el.offsetHeight;
+  el.style.animation = "";
+}
+
+function getSwimmerEl(){
+  let el = swimmerPool.pop();
+  if (!el){
+    el = document.createElement("div");
+    el.className = "swimmer";
+  }
+  return el;
+}
+
+function recycleSwimmer(el){
+  if (el.isConnected) el.remove();
+  activeSwimmers = Math.max(0, activeSwimmers - 1);
+  if (swimmerPool.length < MAX_POOL_SWIMMERS) swimmerPool.push(el);
+}
+
 function spawnConfettiBubblesBurst(count = 40){
   confettiBurstActive = true;
 
-  for (let i = 0; i < count; i++){
-    const b = document.createElement("div");
-    b.className = "bubble";
+  const maxCount = Math.min(count, isCoarsePointer ? 18 : 36);
+  const available = Math.max(0, MAX_BUBBLES - activeBubbles);
+  const finalCount = Math.min(maxCount, available);
+
+  if (finalCount <= 0){
+    setTimeout(() => { confettiBurstActive = false; }, 1200);
+    return;
+  }
+
+  for (let i = 0; i < finalCount; i++){
+    const b = getBubbleEl();
+    activeBubbles++;
 
     const size = 6 + Math.random() * 18;
     b.style.width = `${size}px`;
@@ -1373,7 +1876,7 @@ function spawnConfettiBubblesBurst(count = 40){
     b.style.opacity = "0.9";
 
     bubblesEl.appendChild(b);
-    b.addEventListener("animationend", () => b.remove());
+    resetBubbleAnimation(b);
   }
 
   setTimeout(() => { confettiBurstActive = false; }, 1200);
@@ -1381,8 +1884,9 @@ function spawnConfettiBubblesBurst(count = 40){
 
 // ---------- Swimmers ----------
 function createSwimmer(){
-  const el = document.createElement("div");
-  el.className = "swimmer";
+  if (activeSwimmers >= MAX_SWIMMERS) return;
+  const el = getSwimmerEl();
+  activeSwimmers++;
 
   const fromLeft = Math.random() > 0.5;
   const yy = 80 + Math.random() * (window.innerHeight - 160);
@@ -1396,9 +1900,10 @@ function createSwimmer(){
   const start = performance.now();
   const startX = fromLeft ? -140 : window.innerWidth + 140;
   const endX = fromLeft ? window.innerWidth + 140 : -140;
+  const token = (el._swimToken = (el._swimToken || 0) + 1);
 
   function step(t){
-    if (!el.isConnected) return;
+    if (!el.isConnected || el._swimToken !== token) return;
     if (!running){ requestAnimationFrame(step); return; }
 
     const p = Math.min(1, (t - start) / (dur * 1000));
@@ -1410,7 +1915,7 @@ function createSwimmer(){
     el.style.transform = `${fromLeft ? "scaleX(1)" : "scaleX(-1)"} translateY(${bob}px)`;
 
     if (p < 1) requestAnimationFrame(step);
-    else el.remove();
+    else recycleSwimmer(el);
   }
 
   requestAnimationFrame(step);
@@ -1425,8 +1930,9 @@ function swimmersLoop(){
 
 // ---------- Bubble loop ----------
 function spawnBubble(){
-  const b = document.createElement("div");
-  b.className = "bubble";
+  if (activeBubbles >= MAX_BUBBLES) return;
+  const b = getBubbleEl();
+  activeBubbles++;
 
   const size = 6 + Math.random() * 14;
   b.style.width = `${size}px`;
@@ -1443,7 +1949,7 @@ function spawnBubble(){
   b.style.setProperty("--drift", `${drift}px`);
 
   bubblesEl.appendChild(b);
-  b.addEventListener("animationend", () => b.remove());
+  resetBubbleAnimation(b);
 }
 
 function bubbleLoop(){
@@ -1453,15 +1959,114 @@ function bubbleLoop(){
   setTimeout(bubbleLoop, rate);
 }
 
+// ---------- Particles for feedback ----------
+function spawnParticles(x, y, type, count = 5){
+  for (let i = 0; i < count; i++){
+    const p = document.createElement("div");
+    p.className = `particle ${type}`;
+    p.style.left = `${x + (Math.random() - 0.5) * 20}px`;
+    p.style.top = `${y + (Math.random() - 0.5) * 20}px`;
+    entitiesEl.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
+}
+
+// ---------- Damage flash ----------
+function triggerDamageFlash(){
+  const flash = document.getElementById("damageFlash");
+  if (flash){
+    flash.classList.add("active");
+    setTimeout(() => flash.classList.remove("active"), 200);
+  }
+}
+
+// ---------- Tutorial ----------
+function showTutorial(){
+  if (!tutorialOverlay) return;
+  tutorialMode = true;
+  tutorialStep = 1;
+  tutorialCanEat = false;
+  tutorialCanDash = false;
+  tutorialTitle.textContent = "Tutoriel - Étape 1/3";
+  tutorialMsg.textContent = "Déplace la souris pour bouger le poisson. Clique sur 'Suivant' pour continuer.";
+  tutorialOverlay.classList.remove("hidden");
+  tutorialHand.classList.remove("hidden");
+  // Start cursor update for demo
+  requestAnimationFrame(tutorialFrame);
+}
+
+function tutorialFrame(){
+  if (!tutorialMode) return;
+  updateCursor();
+  updateParallax();
+  checkEat(); // Allow eating demo entities
+  // Move guiding hand
+  if (tutorialHand && tutorialStep === 1) {
+    tutorialHand.style.left = `${mouseX - 24}px`;
+    tutorialHand.style.top = `${mouseY - 24}px`;
+  }
+  requestAnimationFrame(tutorialFrame);
+}
+
+function nextTutorial(){
+  tutorialStep++;
+  if (tutorialStep === 2){
+    tutorialTitle.textContent = "Tutoriel - Étape 2/3";
+    tutorialMsg.textContent = "Mange les nourritures pour gagner des points. Évite les méduses !";
+    tutorialCanEat = true;
+    tutorialCanDash = false;
+    tutorialHand.classList.add("hidden"); // Hide hand
+    // Spawn some demo food and malus
+    spawnFood(5);
+    spawnBonus(2);
+    spawnMalus(1);
+  } else if (tutorialStep === 3){
+    tutorialTitle.textContent = "Tutoriel - Étape 3/3";
+    tutorialMsg.textContent = "Utilise le dash (clic droit) pour fuir le boss. Bonne chance !";
+    tutorialCanEat = true;
+    tutorialCanDash = true;
+    // Enable dash for demo
+  } else {
+    tutorialMode = false;
+    hideTutorial();
+    isFirstTime = false;
+    localStorage.setItem(LS_FIRST_TIME, "true");
+    // Start the real game
+    resetRunProgress();
+    running = true;
+    btnStart.textContent = "Pause";
+    setRunningUI(true);
+    lastFrame = 0;
+    bubbleLoop();
+    swimmersLoop();
+    requestAnimationFrame(frame);
+  }
+}
+
+function hideTutorial(){
+  tutorialMode = false;
+  tutorialOverlay?.classList.add("hidden");
+  tutorialHand?.classList.add("hidden");
+  // Clear demo entities
+  entitiesEl.innerHTML = '';
+}
+
 // ---------- Configure level ----------
 function configureLevel(){
   speed = 1 + (level - 1) * 0.18;
   target = 15 + (level - 1) * 8;
 
-  baseTime = Math.max(18, 30 - (level - 1) * 1.2);
-  timeLeft = baseTime;
+  baseTime = Math.max(18, 30 - (level - 1) * 1.2) * timeMultiplier;
+  
+  // En mode Time Attack, on ne réinitialise PAS le temps (il continue de 60 vers 0)
+  if (gameMode !== GAME_MODES.timeAttack) {
+    timeLeft = baseTime;
+  }
 
-  score = 0;
+  // En mode endless, on ne réinitialise pas le score (il continue d'augmenter)
+  if (gameMode !== GAME_MODES.endless) {
+    score = 0;
+  }
   combo = 1;
   lastEatAt = 0;
 
@@ -1473,7 +2078,10 @@ function configureLevel(){
   dashCooldownMax = Math.max(0.6, 3.0 - runUpDash * 0.12);
 
   entitiesEl.innerHTML = "";
-  spawnFood(40 + level * 2);
+  
+  const foodCount = 40 + level * 2;
+  const adjustedCount = isCoarsePointer ? Math.ceil(foodCount * 0.65) : foodCount;
+  spawnFood(adjustedCount);
 
   if (level >= 2) spawnBonus();
   if (level >= 3) spawnMalus();
@@ -1485,18 +2093,20 @@ function configureLevel(){
 
 // ---------- Dash ----------
 function tryDash(){
-  if (!running) return;
+  if ((!running && !tutorialMode) || (tutorialMode && !tutorialCanDash)) return;
   if (dashCooldown > 0) return;
 
   dashTime = dashTimeMax;
   dashCooldown = dashCooldownMax;
 
   playDash();
-  syncHUD();
+  if (!tutorialMode) syncHUD();
 }
 
 // ---------- Win / Lose ----------
 function winLevel(){
+  if (tutorialMode) return; // Pas de win pendant tutoriel
+
   running = false;
   btnStart.textContent = "Reprendre";
   hideStatsBox();
@@ -1504,6 +2114,16 @@ function winLevel(){
   spawnConfettiBubblesBurst(46);
   addMetaXP(15); // récompense de victoire (ajuste si tu veux)
 
+  // Save high score for time attack
+  if (gameMode === GAME_MODES.timeAttack) {
+    const key = 'highscore_timeAttack';
+    const currentHigh = parseInt(localStorage.getItem(key) || '0');
+    if (totalScore > currentHigh) {
+      localStorage.setItem(key, String(totalScore));
+    }
+    // Submit to global leaderboard (async, no await needed)
+    submitScore(totalScore, gameMode);
+  }
 
   // ✅ reset état upgrade pour cette manche
   upgradeChosenThisWin = false;
@@ -1525,16 +2145,37 @@ function winLevel(){
 
 
 function loseLevel(){
+  if (tutorialMode) return; // Pas de lose pendant tutoriel
+
   running = false;
+  setJoystickVisibility(false);
   resetRunProgress();
+
+  // Save high score for all modes when losing
+  let modeKey = 'highscore_normal';
+  if (gameMode === GAME_MODES.timeAttack) modeKey = 'highscore_timeAttack';
+  if (gameMode === GAME_MODES.endless) modeKey = 'highscore_endless';
+  
+  const currentHigh = parseInt(localStorage.getItem(modeKey) || '0');
+  if (totalScore > currentHigh) {
+    localStorage.setItem(modeKey, String(totalScore));
+  }
+  
+  // Submit to global leaderboard for all modes
+  submitScore(totalScore, gameMode);
 
   btnStart.textContent = "Reprendre";
   showStatsBox();
   renderStats();
 
+  let loseMessage = `Temps écoulé. Tu as atteint le niveau ${level}.`;
+  if (gameMode === GAME_MODES.endless) {
+    loseMessage = `Santé perdue ! Tu as atteint le niveau ${level} avec ${totalScore} points.`;
+  }
+
   showOverlay(
     `Fin de run ❌`,
-    `Temps écoulé. Tu as atteint le niveau ${level}.`,
+    loseMessage,
     "lose"
   );
 }
@@ -1550,14 +2191,17 @@ function maybeSpawnRandom(){
   const bonusChance = Math.min(0.38, 0.18 + level * 0.02);
   const malusChance = Math.min(0.28, 0.10 + level * 0.018);
   const powerChance = Math.min(0.22, 0.06 + level * 0.018);
+  const enemyChance = level >= 2 ? Math.min(0.15, 0.05 + level * 0.01) : 0;
 
   const roll = Math.random();
 
   if (roll < bonusChance) return void spawnBonus();
   if (roll < bonusChance + malusChance) return void spawnMalus();
   if (roll < bonusChance + malusChance + powerChance) return void spawnPowerUp();
+  if (roll < bonusChance + malusChance + powerChance + enemyChance) return void spawnEnemy();
 
-  spawnFood(10);
+  const foodCount = isCoarsePointer ? 6 : 10;
+  spawnFood(foodCount);
 }
 
 // ---------- Main loop ----------
@@ -1572,30 +2216,212 @@ function frame(t){
   dashCooldown = Math.max(0, dashCooldown - dt);
   dashTime = Math.max(0, dashTime - dt);
   magnetTime = Math.max(0, magnetTime - dt);
+  slowTime = Math.max(0, slowTime - dt);
 
-  timeLeft -= dt;
-  if (timeLeft <= 0){
-    timeLeft = 0;
-    syncHUD();
-    loseLevel();
-    return;
+  // Update random events
+  updateEvents(dt);
+
+  if (!tutorialMode) {
+    if (gameMode !== GAME_MODES.endless) {
+      timeLeft -= dt;
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        syncHUD();
+        if (gameMode === GAME_MODES.timeAttack) {
+          // Time Attack : quand le temps arrive à 0, c'est la fin du jeu (game over)
+          loseLevel();
+        } else {
+          loseLevel();
+        }
+        return;
+      }
+    } else {
+      // Endless: check health
+      if (health <= 0) {
+        syncHUD();
+        loseLevel();
+        return;
+      }
+    }
   }
 
   updateCursor();
   updateParallax();
+  applyTideEffect();
   checkEat();
   applyMagnet();
   updateBoss(dt);
+  updateEnemies(dt);
   maybeSpawnRandom();
 
   syncHUD();
   requestAnimationFrame(frame);
 }
 
+// ---------- Random events ----------
+function updateEvents(dt) {
+  if (currentEvent) {
+    eventTimer -= dt;
+    
+    // Animer la marée
+    if (currentEvent === 'tide') {
+      tideOffset += tideDirection * dt * 0.3;
+      if (Math.abs(tideOffset) > 1) {
+        tideDirection *= -1;
+      }
+    }
+    
+    if (eventTimer <= 0) {
+      // End event
+      endEvent();
+      eventTimer = EVENT_INTERVAL + Math.random() * 10; // Next potential event
+    }
+  } else {
+    eventTimer -= dt;
+    // En mode endless: événements dès le niveau 1, sinon niveau 5+
+    const minLevel = gameMode === GAME_MODES.endless ? 1 : 5;
+    if (eventTimer <= 0 && Math.random() < 0.005 && level >= minLevel) { // 0.5% chance
+      // Choisir un événement aléatoire avec probabilité égale
+      const events = ['storm', 'bloodlust', 'tide', 'plankton', 'murky', 'attack-surprise'];
+      const randomEvent = events[Math.floor(Math.random() * events.length)];
+      startEvent(randomEvent);
+    }
+  }
+}
+
+function endEvent() {
+  document.body.classList.remove('storm', 'bloodlust', 'tide', 'plankton', 'murky', 'attack-surprise');
+  currentEvent = null;
+  currentVX = 0;
+  currentVY = 0;
+  tideOffset = 0;
+  tideDirection = 1;
+  planktonActive = false;
+  bossSpeedBoost = 1.0; // réinitialiser la vitesse du boss
+  bossInvisible = false; // réinitialiser l'invisibilité du boss
+  disableBloodDrops();
+}
+
+function startEvent(type) {
+  currentEvent = type;
+  eventTimer = EVENT_DURATION;
+  
+  // Noms des événements pour l'affichage
+  const eventNames = {
+    'storm': '⚡ TEMPÊTE ⚡',
+    'bloodlust': '🦈 SOIF DE SANG 🦈',
+    'tide': '🌊 MARÉE 🌊',
+    'plankton': '✨ PLANCTON LUMINEUX ✨',
+    'murky': '🌫️ EAU TROUBLE 🌫️',
+    'attack-surprise': '💥 ATTAQUE SURPRISE 💥'
+  };
+  
+  // Afficher la notification
+  showEventNotification(eventNames[type] || type.toUpperCase());
+  
+  if (type === 'storm') {
+    document.body.classList.add('storm');
+  } else if (type === 'bloodlust') {
+    // Soif de sang: boost énorme de vitesse du boss
+    bossSpeedBoost = 4.0; // 4x la vitesse normale
+    document.body.classList.add('bloodlust');
+    enableBloodDrops();
+  } else if (type === 'tide') {
+    // Marée qui fait monter/descendre
+    tideOffset = 0;
+    tideDirection = Math.random() > 0.5 ? 1 : -1;
+    document.body.classList.add('tide');
+  } else if (type === 'plankton') {
+    // Plancton lumineux - double les points
+    planktonActive = true;
+    document.body.classList.add('plankton');
+  } else if (type === 'murky') {
+    // Eau trouble - réduit visibilité et augmente difficulté
+    document.body.classList.add('murky');
+  } else if (type === 'attack-surprise') {
+    // Attaque surprise: boss devient invisible mais toujours actif
+    bossInvisible = true;
+    document.body.classList.add('attack-surprise');
+  }
+}
+
+function showEventNotification(eventName) {
+  const notification = document.getElementById('eventNotification');
+  const textEl = notification.querySelector('.event-notification-text');
+  
+  if (!notification || !textEl) return;
+  
+  textEl.textContent = eventName;
+  notification.classList.remove('hidden', 'fadeOut');
+  
+  // Faire disparaître après 2.5 secondes
+  setTimeout(() => {
+    notification.classList.add('fadeOut');
+    setTimeout(() => {
+      notification.classList.add('hidden');
+    }, 400);
+  }, 2500);
+}
+
 // ---------- Controls ----------
+const joystickContainer = document.getElementById("joystickContainer");
+const joystickStick = document.getElementById("joystickStick");
+let joystickActive = false;
+let joystickX = 0, joystickY = 0;
+const JOYSTICK_RADIUS = 40;
+const JOYSTICK_DEADZONE = 8;
+
+function setJoystickVisibility(show){
+  if (isCoarsePointer){
+    if (show) joystickContainer.classList.remove("hidden");
+    else joystickContainer.classList.add("hidden");
+  }
+}
+
+joystickContainer.addEventListener("pointerdown", (e) => {
+  if (!isCoarsePointer) return;
+  joystickActive = true;
+  const rect = joystickContainer.getBoundingClientRect();
+  updateJoystick(e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
+
+document.addEventListener("pointermove", (e) => {
+  if (!joystickActive) return;
+  const rect = joystickContainer.getBoundingClientRect();
+  updateJoystick(e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: true });
+
+document.addEventListener("pointerup", () => {
+  joystickActive = false;
+  joystickX = 0;
+  joystickY = 0;
+  joystickStick.style.transform = "translate(0, 0)";
+}, { passive: true });
+
+function updateJoystick(px, py){
+  const cx = joystickContainer.offsetWidth / 2;
+  const cy = joystickContainer.offsetHeight / 2;
+  let dx = px - cx;
+  let dy = py - cy;
+  const dist = Math.hypot(dx, dy);
+  
+  if (dist < JOYSTICK_DEADZONE){
+    joystickX = 0;
+    joystickY = 0;
+  } else {
+    const ratio = Math.min(1, dist / JOYSTICK_RADIUS);
+    joystickX = (dx / dist) * ratio;
+    joystickY = (dy / dist) * ratio;
+  }
+  
+  joystickStick.style.transform = `translate(${joystickX * JOYSTICK_RADIUS}px, ${joystickY * JOYSTICK_RADIUS}px)`;
+}
+
 window.addEventListener("mousemove", (e) => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
+  if (!joystickActive){
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  }
 });
 
 window.addEventListener("contextmenu", (e) => {
@@ -1628,10 +2454,102 @@ window.addEventListener("keydown", async (e) => {
   }
 });
 
+// ---------- OPTIONS PANEL ----------
+const optionsOverlay = document.getElementById("optionsOverlay");
+const btnOptions = document.getElementById("btnOptions");
+const btnCloseOptions = document.getElementById("btnCloseOptions");
+const bossSpeedSlider = document.getElementById("bossSpeedSlider");
+const bossSpeedValue = document.getElementById("bossSpeedValue");
+const timeMultiplierSlider = document.getElementById("timeMultiplierSlider");
+const timeMultiplierValue = document.getElementById("timeMultiplierValue");
+const parallaxToggle = document.getElementById("parallaxToggle");
+const causticsToggle = document.getElementById("causticsToggle");
+const swimmersToggle = document.getElementById("swimmersToggle");
+const btnResetOptions = document.getElementById("btnResetOptions");
+
+function openOptionsPanel(){
+  bossSpeedSlider.value = bossSpeedMultiplier;
+  bossSpeedValue.textContent = bossSpeedMultiplier.toFixed(1) + "x";
+  timeMultiplierSlider.value = timeMultiplier;
+  timeMultiplierValue.textContent = timeMultiplier.toFixed(1) + "x";
+  parallaxToggle.checked = parallaxEnabled;
+  causticsToggle.checked = causticsEnabled;
+  swimmersToggle.checked = swimmersEnabled;
+  
+  // Pause game if it was running
+  wasRunningBeforeOptions = running;
+  if (running) {
+    running = false;
+    setRunningUI(false);
+  }
+  
+  optionsOverlay.classList.remove("hidden");
+}
+
+function closeOptionsPanel(){
+  optionsOverlay.classList.add("hidden");
+  
+  // Resume game if it was running before opening options
+  if (wasRunningBeforeOptions) {
+    running = true;
+    setRunningUI(true);
+    wasRunningBeforeOptions = false;
+  }
+}
+
+btnOptions?.addEventListener("click", openOptionsPanel);
+btnCloseOptions?.addEventListener("click", closeOptionsPanel);
+
+bossSpeedSlider?.addEventListener("input", (e) => {
+  bossSpeedMultiplier = parseFloat(e.target.value);
+  bossSpeedValue.textContent = bossSpeedMultiplier.toFixed(1) + "x";
+  saveGameOptions();
+});
+
+timeMultiplierSlider?.addEventListener("input", (e) => {
+  timeMultiplier = parseFloat(e.target.value);
+  timeMultiplierValue.textContent = timeMultiplier.toFixed(1) + "x";
+  saveGameOptions();
+});
+
+parallaxToggle?.addEventListener("change", (e) => {
+  parallaxEnabled = e.target.checked;
+  saveGameOptions();
+});
+
+causticsToggle?.addEventListener("change", (e) => {
+  causticsEnabled = e.target.checked;
+  saveGameOptions();
+});
+
+swimmersToggle?.addEventListener("change", (e) => {
+  swimmersEnabled = e.target.checked;
+  saveGameOptions();
+});
+
+btnResetOptions?.addEventListener("click", () => {
+  if (confirm("Réinitialiser toutes les options par défaut ?")){
+    bossSpeedMultiplier = 1.0;
+    timeMultiplier = 1.0;
+    parallaxEnabled = true;
+    causticsEnabled = true;
+    swimmersEnabled = true;
+    saveGameOptions();
+    openOptionsPanel();
+  }
+});
+
+optionsOverlay?.addEventListener("click", (e) => {
+  if (e.target === optionsOverlay) closeOptionsPanel();
+});
+
+applyVisualOptions();
+
 // ---------- Start from overlay ----------
 async function startGameFromOverlay(){
   // start new run
   resetRunProgress();
+  initializeGameForMode();
 
   hideRules();
   hideOverlay();
@@ -1641,6 +2559,7 @@ async function startGameFromOverlay(){
   running = true;
   btnStart.textContent = "Pause";
   setRunningUI(true);
+  setJoystickVisibility(true);
 
   if (soundToggle?.checked){
     const ctx = ensureAudio();
@@ -1662,6 +2581,7 @@ btnStart.addEventListener("click", async () => {
   if (!running){
     // start new run
     resetRunProgress();
+    initializeGameForMode();
 
     hideRules();
     hideOverlay();
@@ -1711,6 +2631,39 @@ btnReset.addEventListener("click", () => {
   showRules();
 });
 
+// Top Leaderboard (affichage en haut à droite)
+async function updateTopLeaderboard(mode) {
+  try {
+    const scores = await getLeaderboard(mode, 3);
+    
+    topLeaderboardList.innerHTML = '';
+    
+    if (!scores || scores.length === 0) {
+      topLeaderboardList.innerHTML = '<div class="top-leaderboard-item">Aucun score</div>';
+      return;
+    }
+    
+    scores.forEach((entry, index) => {
+      const item = document.createElement("div");
+      let rankClass = '';
+      if (index === 0) rankClass = 'rank1';
+      else if (index === 1) rankClass = 'rank2';
+      else if (index === 2) rankClass = 'rank3';
+      
+      item.className = `top-leaderboard-item ${rankClass}`;
+      const username = entry.username || 'Anonyme';
+      item.textContent = `${index + 1}. ${username} - ${entry.score || 0}`;
+      topLeaderboardList.appendChild(item);
+    });
+  } catch (error) {
+    console.error('Erreur chargement classement:', error);
+    topLeaderboardList.innerHTML = '<div class="top-leaderboard-item">Erreur</div>';
+  }
+}
+
+// Charger le classement initial
+setGameMode(GAME_MODES.normal);
+
 btnRetry.addEventListener("click", () => {
   // recommencer / rejouer = retour menu rules
   level = 1;
@@ -1739,11 +2692,80 @@ btnRetry.addEventListener("click", () => {
 // ---------- Init ----------
 bestEl.textContent = bestScore;
 
+// USERNAME MODAL SYSTEM
+function showUsernameModal() {
+  const modal = document.getElementById('usernameModal');
+  const input = document.getElementById('usernameInput');
+  const btnSet = document.getElementById('btnSetUsername');
+  const errorMsg = document.getElementById('usernameError');
+  
+  modal.classList.remove('hidden');
+  input.value = '';
+  input.focus();
+  errorMsg.style.display = 'none';
+  
+  async function submitUsername() {
+    const username = input.value.trim();
+    if (username.length < 2) {
+      errorMsg.textContent = 'Le nom doit avoir au moins 2 caractères';
+      errorMsg.style.display = 'block';
+      return;
+    }
+    if (username.length > 20) {
+      errorMsg.textContent = 'Le nom ne doit pas dépasser 20 caractères';
+      errorMsg.style.display = 'block';
+      return;
+    }
+    
+    // Vérifier si le nom existe déjà
+    const exists = await checkUsernameExists(username);
+    if (exists) {
+      errorMsg.textContent = 'Ce nom est déjà pris. Choisissez un autre.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+    
+    setUsername(username);
+    saveUsernameToCloud(getUserId(), username);
+    modal.classList.add('hidden');
+    
+    // Ne pas lancer le jeu, juste fermer le modal
+    // L'utilisateur devra cliquer sur "Démarrer" pour commencer
+  }
+  
+  btnSet.onclick = submitUsername;
+  input.onkeyup = (e) => {
+    if (e.key === 'Enter') submitUsername();
+  };
+}
+
+// Check if username exists on startup, show modal if needed
+if (!getUsername()) {
+  showUsernameModal();
+}
+
 configureLevel();
 syncHUD();
 setRunningUI(false);
-showRules();
+if (isFirstTime) {
+  showTutorial();
+} else {
+  showRules();
+}
 applyEquippedSkins();
 renderMetaBar();
+
+// Tutorial events
+if (btnTutorialNext) btnTutorialNext.addEventListener("click", nextTutorial);
+if (btnSkipTutorial) btnSkipTutorial.addEventListener("click", () => {
+  tutorialMode = false;
+  hideTutorial();
+  isFirstTime = false;
+  localStorage.setItem(LS_FIRST_TIME, "true");
+  showUsernameModal(); // Force name choice
+});
+
+// Exports pour tests
+export { checkEat, syncHUD, addMetaXP, saveMeta };
 
 

@@ -8,6 +8,7 @@
 html, body{
   height: 100%;
   overscroll-behavior: none;
+  z-index: 0;
 }
 
 #scene{
@@ -32,6 +33,48 @@ body{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--text);
   background:#001b2b;
+  position: relative;
+}
+
+/* Effet de sang qui coule (overlay) */
+.blood-layer{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9000;
+}
+
+.blood-drop{
+  position: absolute;
+  top: -12vh;
+  left: var(--x, 50%);
+  width: var(--w, 18px);
+  height: var(--h, 46px);
+  background: #8b0000;
+  border-radius: 50% 50% 55% 55%;
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,0.35));
+  opacity: 0.9;
+  animation: bloodDrip var(--duration, 3.2s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.blood-drop::after{
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 30%;
+  height: 65%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+}
+
+@keyframes bloodDrip{
+  0%   { transform: translateY(0) scaleY(0.95); opacity: 0; }
+  10%  { opacity: 0.9; }
+  100% { transform: translateY(120vh) scaleY(1.1); opacity: 0.15; }
 }
 
 /* Quand le jeu tourne, on cache le curseur normal */
@@ -109,7 +152,11 @@ body.game-running{
 }
 
 /* Bulles */
-#bubbles{ position:absolute; inset:0; pointer-events:none; z-index:5; }
+#bubbles{
+  position:absolute; inset:0; pointer-events:none; z-index:5;
+  contain: layout paint size;
+  content-visibility: auto;
+}
 .bubble{
   position:absolute; bottom:-40px;
   border-radius:999px;
@@ -125,7 +172,11 @@ body.game-running{
 }
 
 /* Poissons nageurs (décor) */
-#swimmers{ position:absolute; inset:0; pointer-events:none; z-index:6; }
+#swimmers{
+  position:absolute; inset:0; pointer-events:none; z-index:6;
+  contain: layout paint size;
+  content-visibility: auto;
+}
 .swimmer{
   position: absolute;
   width: 120px;
@@ -140,7 +191,11 @@ body.game-running{
 
 
 /* Entités */
-#entities{ position:absolute; inset:0; z-index:7; }
+#entities{
+  position:absolute; inset:0; z-index:7;
+  contain: layout paint size;
+  content-visibility: auto;
+}
 .entity{
   position: absolute;
   pointer-events: none;
@@ -190,6 +245,13 @@ body.game-running{
   filter: drop-shadow(0 0 8px rgba(120,200,255,0.7));
 }
 
+.entity.enemy{
+  width: 32px;
+  height: 32px;
+  background-image: url("assets/items/enemy.png"); /* Ajoute une image d'ennemi */
+  filter: drop-shadow(0 0 6px rgba(255,100,100,0.6));
+}
+
 @keyframes floatItem{
   0%   { transform: translateY(0); }
   50%  { transform: translateY(-6px); }
@@ -219,6 +281,12 @@ body.game-running{
   z-index: 99999;
   pointer-events:none;
 }
+
+/* Cacher le curseur poisson quand le jeu n'est pas en cours */
+body:not(.game-running) #cursorWrap {
+  display: none !important;
+}
+
 #cursorFish{
   position: fixed;
   width: 72px;
@@ -232,6 +300,7 @@ body.game-running{
 }
 #cursorFish::before,
 #cursorFish::after{ content: none; }
+
 
 /* Bouton Dash mobile */
 .dash-mobile{
@@ -276,6 +345,18 @@ body.game-running{
 .rules li{ margin-bottom: 4px; }
 .rules b{ color: #ffffff; }
 
+/* Scrollbar du menu (même style que la boutique) */
+.rules::-webkit-scrollbar{
+  width: 8px;
+}
+.rules::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.rules::-webkit-scrollbar-track{
+  background: rgba(0,0,0,0.15);
+}
+
 /* HUD */
 #hud{
   position: fixed;
@@ -288,12 +369,72 @@ body.game-running{
   backdrop-filter: blur(10px);
   min-width: 360px;
 }
+
+/* Top Leaderboard */
+.top-leaderboard {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 12px 15px;
+  backdrop-filter: none;
+  min-width: auto;
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 10001;
+}
+
+.leaderboard-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #0f0;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.top-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.top-leaderboard-item {
+  font-size: 12px;
+  color: #fff;
+  padding: 4px 8px;
+  background: rgba(0, 150, 255, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-leaderboard-item.rank1 {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.2);
+}
+
+.top-leaderboard-item.rank2 {
+  color: #c0c0c0;
+  background: rgba(192, 192, 192, 0.2);
+}
+
+.top-leaderboard-item.rank3 {
+  color: #cd7f32;
+  background: rgba(205, 127, 50, 0.2);
+}
+
 .hud-top{
   display:flex;
   gap: 14px;
   flex-wrap: wrap;
   font-size: 14px;
 }
+
+#healthDisplay {
+  display: none;
+}
+
 .hud-bottom{
   margin-top: 10px;
   display:flex;
@@ -310,6 +451,269 @@ button{
   cursor: pointer;
 }
 button:hover{ background: rgba(0,0,0,0.35); }
+
+@media (hover: none) and (pointer: coarse){
+  .entity,
+  .swimmer,
+  #boss,
+  #cursorFish{
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .bubble{
+    animation-duration: calc(var(--duration, 8s) * 1.5) !important;
+  }
+  .caustic{
+    animation-duration: 20s !important;
+  }
+  .layer{
+    transform: translate3d(0,0,0);
+  }
+}
+
+/* Virtual Joystick */
+.joystick-container{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  z-index: 24000;
+  touch-action: none;
+  pointer-events: auto;
+}
+
+.joystick-bg{
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.joystick-stick{
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5), rgba(100, 150, 255, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(100, 150, 255, 0.5);
+  pointer-events: none;
+  will-change: transform;
+}
+
+@media (hover: none) and (pointer: coarse){
+  .joystick-container:not(.hidden){
+    display: block;
+  }
+  .joystick-container.hidden{
+    display: none;
+  }
+  
+  #hud{
+    max-width: 100%;
+    left: auto;
+    right: 4px;
+    top: 4px;
+    min-width: unset;
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .hud-top{
+    gap: 6px;
+    font-size: 0.75rem;
+  }
+  
+  .hud-bottom{
+    gap: 4px;
+    margin-top: 6px;
+  }
+  
+  button{
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .hint{
+    display: none;
+  }
+  
+  .top-leaderboard{
+    bottom: 140px;
+    right: 8px;
+    font-size: 0.75rem;
+  }
+  
+  .leaderboard-title{
+    font-size: 11px;
+  }
+  
+  .top-leaderboard-item{
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 600px){
+  #metaUI{
+    bottom: 12px;
+    left: 140px;
+    right: auto;
+    font-size: 0.7rem;
+  }
+  
+  #dashCooldownUI{
+    height: 3px;
+  }
+}
+
+/* Options Panel */
+#optionsOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25000;
+  backdrop-filter: blur(4px);
+}
+
+#optionsOverlay.hidden{
+  display: none;
+}
+
+.options-panel{
+  background: rgba(0, 20, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 450px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.options-head{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.options-head h3{
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.options-content{
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.option-group{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.option-group label{
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.option-group small{
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+}
+
+.slider-container{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-container input[type="range"]{
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(100, 150, 255, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6496ff, #4080ff);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(100, 150, 255, 0.5);
+}
+
+.slider-container input[type="range"]::-moz-range-thumb{
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6496ff, #4080ff);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(100, 150, 255, 0.5);
+}
+
+.slider-container span{
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.checkbox-label{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"]{
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #6496ff;
+}
+
+.checkbox-label span{
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+button.full-width{
+  width: 100%;
+}
+
+#btnCloseOptions{
+  padding: 6px 10px;
+}
 button.secondary{ opacity: 0.9; }
 .toggle{
   display:flex; gap:8px; align-items:center;
@@ -336,6 +740,10 @@ button.secondary{ opacity: 0.9; }
   cursor: default;
 }
 #overlay.hidden{ display:none; }
+
+#overlay.lose{
+  background: rgba(5, 15, 25, 0.72);
+}
 
 .panel{
   width: min(460px, 92vw);
@@ -491,7 +899,7 @@ button.secondary{ opacity: 0.9; }
 
 .upgrades-grid{
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
@@ -535,10 +943,10 @@ button.secondary{ opacity: 0.9; }
   font-size: .95rem;
 }
 
-/* Sur écrans larges: 3 colonnes */
+/* Sur écrans larges: garder 2 colonnes pour une meilleure présentation */
 @media (min-width: 700px){
   .upgrades-grid{
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
   .upgrade-card{
     height: 130px;
@@ -617,6 +1025,111 @@ body.game-running #dashCooldownUI{
   pointer-events: none; /* le bouton aura pointer-events */
 }
 
+/* Leaderboard */
+.leaderboard {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.leaderboard.hidden {
+  display: none;
+}
+
+.leaderboard .panel {
+  width: min(500px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgba(5, 15, 25, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.leaderboard h3 {
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 20px;
+}
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  justify-content: center;
+}
+
+.leaderboard-tab {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.leaderboard-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.leaderboard-tab.active {
+  background: rgba(0, 150, 255, 0.5);
+  border-color: #0096ff;
+}
+
+.leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 15px;
+}
+
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  margin-bottom: 8px;
+}
+
+.leaderboard-rank {
+  font-weight: bold;
+  width: 30px;
+  text-align: center;
+}
+
+.leaderboard-rank.top1 { color: #ffd700; }
+.leaderboard-rank.top2 { color: #c0c0c0; }
+.leaderboard-rank.top3 { color: #cd7f32; }
+
+.leaderboard-user {
+  flex: 1;
+  margin-left: 10px;
+}
+
+.leaderboard-user-id {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.leaderboard-score {
+  font-weight: bold;
+  font-size: 16px;
+  color: #0f0;
+}
+
+#btnCloseLeaderboard {
+  width: 100%;
+}
+
 /* Aquarium button IN overlay (visible only when overlay is visible) */
 #overlay:not(.hidden) #btnAquarium{
   display: inline-flex !important;
@@ -665,6 +1178,33 @@ body.game-running #dashCooldownUI{
   align-items: center;
   justify-content: center;
   box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+}
+
+/* NEW badge sur les skins */
+.new-badge{
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255,80,120,0.95);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+  z-index: 10;
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badgePulse{
+  0%, 100%{ transform: scale(1); }
+  50%{ transform: scale(1.08); }
 }
 
 /* Show aquarium only when overlay is visible (menus) */
@@ -824,6 +1364,7 @@ body.game-running #metaUI{ display:flex; }
 }
 
 .skin-card{
+  position: relative;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.14);
   background: rgba(0,0,0,0.22);
@@ -1055,6 +1596,26 @@ body.game-running #metaUI{ display:flex; }
 /* ===== Badge compteur onglets (Poisson / Boss) ===== */
 .tab{
   position: relative; /* nécessaire pour positionner le badge */
+}
+
+.tab-badge{
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+  background: rgba(255, 80, 120, 0.95); 
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  pointer-events: none;
 }
 
 .tab .count{
@@ -1307,6 +1868,493 @@ body.game-running #metaUI{ display:flex; }
     animation: none !important;
   }
 }
+
+/* =========================================================
+   PARTICLES POUR FEEDBACK VISUEL
+   ========================================================= */
+.particle {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  animation: particleFade 1s ease-out forwards;
+}
+
+.particle.bubble {
+  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+}
+
+.particle.spark {
+  background: radial-gradient(circle, #ffd700 0%, transparent 70%);
+  width: 8px;
+  height: 8px;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+@keyframes particleFade {
+  0% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.5) translateY(-20px); }
+}
+
+/* =========================================================
+   TUTORIAL OVERLAY
+   ========================================================= */
+#tutorialOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3); /* Semi-transparent pour voir derrière */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none; /* Permet les interactions derrière */
+}
+
+.tutorial-panel {
+  background: rgba(0,0,0,0.9);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 400px;
+  text-align: center;
+  color: white;
+  pointer-events: auto; /* Boutons interactifs */
+}
+
+.tutorial-panel button {
+  margin: 10px 5px;
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tutorial-panel button:hover {
+  background: #0056b3;
+}
+
+/* Tutorial guiding hand */
+#tutorialHand {
+  position: fixed;
+  font-size: 48px;
+  pointer-events: none;
+  z-index: 999;
+  transition: transform 0.1s ease;
+}
+
+/* Damage flash overlay */
+#damageFlash {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 999999;
+  transition: opacity 0.2s ease-out;
+}
+
+#damageFlash.active {
+  opacity: 1;
+}
+
+/* Force hide when game not running */
+body:not(.game-running) #damageFlash {
+  opacity: 0 !important;
+  display: none;
+}
+
+/* Mode selection */
+.mode-selection {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.mode-selection h4 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.mode-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 8px 12px;
+  margin: 0 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.mode-btn.active {
+  background: rgba(0,150,255,0.5);
+  border-color: #0096ff;
+}
+
+/* Storm event shake */
+.storm {
+  animation: shake 0.1s infinite;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-2px) rotate(-0.5deg); }
+  50% { transform: translateX(2px) rotate(0.5deg); }
+  75% { transform: translateX(-1px) rotate(-0.25deg); }
+  100% { transform: translateX(1px) rotate(0.25deg); }
+}
+
+/* Soif de sang - gouttes rouges qui coulent */
+body.bloodlust::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(3px 10px at 2% 0%, rgba(200, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 5% 0%, rgba(220, 20, 20, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 8% 0%, rgba(180, 0, 0, 0.85), transparent 100%),
+    radial-gradient(2px 8px at 11% 0%, rgba(200, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 14% 0%, rgba(210, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 17% 0%, rgba(190, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 20% 0%, rgba(200, 0, 0, 0.85), transparent 100%),
+    radial-gradient(2px 8px at 23% 0%, rgba(220, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 26% 0%, rgba(200, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 29% 0%, rgba(210, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 32% 0%, rgba(200, 0, 0, 0.85), transparent 100%),
+    radial-gradient(2px 8px at 35% 0%, rgba(200, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 38% 0%, rgba(210, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 41% 0%, rgba(190, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 44% 0%, rgba(200, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2px 8px at 47% 0%, rgba(220, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 50% 0%, rgba(200, 0, 0, 0.85), transparent 100%),
+    radial-gradient(2.5px 9px at 53% 0%, rgba(210, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 56% 0%, rgba(180, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2px 8px at 59% 0%, rgba(200, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 62% 0%, rgba(210, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 65% 0%, rgba(190, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 68% 0%, rgba(200, 0, 0, 0.85), transparent 100%),
+    radial-gradient(2px 8px at 71% 0%, rgba(220, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 74% 0%, rgba(200, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 77% 0%, rgba(210, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 80% 0%, rgba(200, 0, 0, 0.85), transparent 100%),
+    radial-gradient(2px 8px at 83% 0%, rgba(200, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 86% 0%, rgba(210, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2.5px 9px at 89% 0%, rgba(190, 5, 5, 0.75), transparent 100%),
+    radial-gradient(3px 10px at 92% 0%, rgba(200, 0, 0, 0.8), transparent 100%),
+    radial-gradient(2px 8px at 95% 0%, rgba(220, 10, 10, 0.8), transparent 100%),
+    radial-gradient(3px 10px at 98% 0%, rgba(200, 0, 0, 0.85), transparent 100%);
+  background-size: 100% 100%;
+  background-repeat: repeat-y;
+  animation: bloodDrop 2.2s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes bloodDrop {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* Marée - effet d'oscillation douce */
+body.tide .layer {
+  animation: tideWave 4s ease-in-out infinite !important;
+}
+
+@keyframes tideWave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(15px); }
+}
+
+/* Plancton lumineux - petits points scintillants verts VISIBLES */
+body.plankton::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(4px 4px at 10% 20%, rgba(0, 255, 150, 1), rgba(0, 255, 150, 0.5) 60%, transparent),
+    radial-gradient(3.5px 3.5px at 25% 35%, rgba(100, 255, 180, 0.95), rgba(100, 255, 180, 0.4) 60%, transparent),
+    radial-gradient(4px 4px at 40% 15%, rgba(50, 255, 150, 1), rgba(50, 255, 150, 0.5) 60%, transparent),
+    radial-gradient(3px 3px at 18% 60%, rgba(0, 255, 180, 0.95), rgba(0, 255, 180, 0.4) 60%, transparent),
+    radial-gradient(4px 4px at 70% 45%, rgba(100, 255, 150, 1), rgba(100, 255, 150, 0.5) 60%, transparent),
+    radial-gradient(3.5px 3.5px at 45% 70%, rgba(30, 255, 170, 0.9), rgba(30, 255, 170, 0.4) 60%, transparent),
+    radial-gradient(4px 4px at 80% 25%, rgba(0, 255, 160, 1), rgba(0, 255, 160, 0.5) 60%, transparent),
+    radial-gradient(3px 3px at 55% 55%, rgba(80, 255, 160, 0.95), rgba(80, 255, 160, 0.4) 60%, transparent),
+    radial-gradient(4px 4px at 35% 85%, rgba(0, 255, 150, 1), rgba(0, 255, 150, 0.5) 60%, transparent),
+    radial-gradient(3.5px 3.5px at 75% 75%, rgba(100, 255, 180, 0.95), rgba(100, 255, 180, 0.4) 60%, transparent),
+    radial-gradient(4px 4px at 15% 45%, rgba(50, 255, 160, 1), rgba(50, 255, 160, 0.5) 60%, transparent),
+    radial-gradient(3px 3px at 90% 10%, rgba(0, 255, 180, 0.95), rgba(0, 255, 180, 0.4) 60%, transparent);
+  background-size: 
+    200px 200px,
+    220px 220px,
+    240px 240px,
+    200px 200px,
+    220px 240px,
+    240px 200px,
+    200px 220px,
+    220px 200px,
+    240px 220px,
+    200px 240px,
+    220px 200px,
+    240px 240px;
+  background-repeat: repeat;
+  background-position:
+    0 0,
+    50px 30px,
+    20px 50px,
+    80px 40px,
+    30px 80px,
+    60px 60px,
+    40px 20px,
+    70px 50px,
+    10px 90px,
+    100px 20px,
+    30px 30px,
+    90px 80px;
+  animation: planktonShimmer 2.5s ease-in-out infinite, planktonDrift 8s linear infinite;
+  pointer-events: none;
+  z-index: 8;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 150, 0.8));
+}
+
+/* Plancton lumineux - assombrir l'écran */
+body.plankton::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 15, 20, 0.55);
+  pointer-events: none;
+  z-index: 7;
+}
+
+@keyframes planktonShimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes planktonDrift {
+  0% { background-position: 0 0, 50px 30px, 20px 50px, 80px 40px, 30px 80px, 60px 60px, 40px 20px, 70px 50px, 10px 90px, 100px 20px, 30px 30px, 90px 80px; }
+  100% { background-position: -30px -40px, 20px 0px, -10px 20px, 50px 10px, 0px 50px, 30px 30px, 10px -10px, 40px 20px, -20px 60px, 70px -10px, 0px 0px, 60px 50px; }
+}
+
+/* Eau trouble - voile troublant sur écran */
+body.murky #scene::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 40, 0.4);
+  backdrop-filter: blur(2.5px);
+  pointer-events: none;
+  z-index: 8000;
+  animation: murkyPulse 2s ease-in-out infinite;
+}
+
+body.murky .entity {
+  opacity: 0.8;
+}
+
+body.murky #boss {
+  filter: brightness(0.75);
+}
+
+/* Murky pulse effect */
+@keyframes murkyPulse {
+  0%, 100% { backdrop-filter: blur(2.5px); }
+  50% { backdrop-filter: blur(3.5px); }
+}
+
+/* Attaque surprise - boss invisible */
+body.attack-surprise #boss {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* Boss reappears briefly at events end (visual feedback) */
+body.attack-surprise .event-notification {
+  animation: attackPulse 0.4s ease-out;
+}
+
+@keyframes attackPulse {
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* =========================================================
+   NOTIFICATION D'ÉVÉNEMENT
+   ========================================================= */
+
+.event-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.event-notification.hidden {
+  display: none;
+}
+
+.event-notification-content {
+  background: linear-gradient(135deg, rgba(0,20,40,0.95), rgba(0,40,70,0.95));
+  border: 2px solid rgba(120,240,255,0.6);
+  border-radius: 16px;
+  padding: 24px 48px;
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.6),
+    0 0 40px rgba(120,240,255,0.4),
+    inset 0 0 30px rgba(120,240,255,0.1);
+  animation: eventPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.event-notification-text {
+  font-size: 32px;
+  font-weight: bold;
+  color: rgba(255,255,255,0.95);
+  text-align: center;
+  text-shadow: 
+    0 0 20px rgba(120,240,255,0.8),
+    0 2px 8px rgba(0,0,0,0.8);
+  letter-spacing: 2px;
+}
+
+@keyframes eventPopIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.event-notification.fadeOut .event-notification-content {
+  animation: eventFadeOut 0.4s ease-out forwards;
+}
+
+@keyframes eventFadeOut {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Style pour le champ de nom (cohérent avec les boutons du menu) */
+#usernameInput:hover {
+  background: rgba(255,255,255,0.2) !important;
+}
+
+#usernameInput:focus {
+  outline: none;
+  border-color: #0096ff !important;
+  background: rgba(0,150,255,0.2) !important;
+}
+
+/* Bouton "Continuer" du modal nom avec effet hover */
+#btnSetUsername:hover {
+  background: rgba(120,240,255,0.28) !important;
+  box-shadow: 0 0 20px rgba(120,240,255,0.35) !important;
+  transform: translateY(-1px);
+}
+
+#btnSetUsername:active {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   MODAL DE CHOIX DE NOM
+   ========================================================= */
+
+.username-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 50000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.username-panel {
+  background: rgba(5,15,25,0.72);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 32px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.username-title {
+  color: #7ffcff;
+  margin-bottom: 16px;
+  font-size: 24px;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(127,252,255,0.4);
+}
+
+.username-text {
+  color: rgba(234,252,255,0.9);
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+#usernameInput {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 16px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+#btnSetUsername {
+  width: 100%;
+  padding: 12px;
+  background: rgba(120,240,255,0.18);
+  border: 1px solid rgba(120,240,255,0.35);
+  color: #fff;
+  border-radius: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  box-shadow: 0 0 14px rgba(120,240,255,0.22);
+}
+
+.username-error {
+  color: #ff6666;
+  font-size: 14px;
+  margin-top: 8px;
+  display: none;
+}
+
 /* =========================================================
    FIN DU FICHIER styles.css
    ========================================================= */

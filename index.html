@@ -32,12 +32,28 @@
   <!-- Curseur poisson (visible tout le temps) -->
   <div id="cursorWrap"><div id="cursorFish"></div></div>
 
+  <!-- Notification d'événement -->
+  <div id="eventNotification" class="event-notification hidden">
+    <div class="event-notification-content">
+      <div class="event-notification-text"></div>
+    </div>
+  </div>
+
   <!-- HUD -->
   <div id="hud">
     <div class="hud-top">
       <div>Niveau : <b id="level">1</b></div>
       <div>Objectif : <b id="score">0</b> / <b id="target">15</b></div>
       <div>Temps : <b id="time">30.0</b>s</div>
+      <div id="healthDisplay">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>Santé :</span>
+          <div style="width: 100px; height: 20px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+            <div id="healthBar" style="height: 100%; width: 100%; background: linear-gradient(90deg, #00ff00, #ffff00, #ff6600); transition: width 0.1s; border-radius: 3px;"></div>
+          </div>
+          <span><b id="health">100</b>/100</span>
+        </div>
+      </div>
       <div>Combo : <b id="combo">x1</b></div>
       <div>Total : <b id="total">0</b></div>
       <div>Best : <b id="best">0</b></div>
@@ -46,6 +62,7 @@
     <div class="hud-bottom">
       <button id="btnStart">Démarrer</button>
       <button id="btnReset" class="secondary">Recommencer</button>
+      <button id="btnOptions" class="secondary" aria-label="Options avancées">⚙️</button>
 
       <label class="toggle">
         <input type="checkbox" id="soundToggle" checked />
@@ -57,7 +74,15 @@
       Déplace la souris • Espace / clic droit = Dash • Attrape l’aimant (bleu) • Évite le boss !
     </div>
   </div>
-
+  <!-- CLASSEMENT GLOBAL (EN DEHORS DU HUD) -->
+  <div id="topLeaderboard" class="top-leaderboard">
+    <div class="leaderboard-title">🏆 Top 3</div>
+    <div id="topLeaderboardList" class="top-leaderboard-list">
+      <div class="top-leaderboard-item">-</div>
+      <div class="top-leaderboard-item">-</div>
+      <div class="top-leaderboard-item">-</div>
+    </div>
+  </div>
   <!-- OVERLAY -->
   <div id="overlay" class="hidden">
     <div class="panel">
@@ -73,13 +98,15 @@
       <div id="rules" class="rules hidden">
         <h3>🐟 Objectif</h3>
         <p>
-          Mange les nourritures pour atteindre l’objectif du niveau
-          avant la fin du temps.
+          Selon le mode choisi, mange les nourritures pour atteindre l’objectif
+          avant la fin du temps ou maintenir ta santé.
+          Choisis ton mode en haut de l'écran de démarrage.
         </p>
 
         <h3>⏱️ Temps</h3>
         <p>
-          Mange rapidement pour éviter que le temps ne s’écoule.
+          En mode Normal et Time Attack, mange rapidement pour éviter que le temps ne s’écoule.
+          En Endless, pas de limite de temps mais surveille ta santé !
           Certains bonus peuvent t’aider.
         </p>  
 
@@ -94,7 +121,7 @@
         <ul>
           <li>🥫 <b>Nourriture</b> : augmente le score</li>
           <li>✨ <b>Bonus (limace)</b> : temps ou points supplémentaires</li>
-          <li>⚠️ <b>Malus (méduse)</b> : pénalité de temps</li>
+          <li>⚠️ <b>Malus (méduse)</b> : pénalité de temps (ou santé en Endless)</li>
           <li>🌊 <b>Power Dash (coraux)</b> : dash plus fréquent</li>
           <li>🧲 <b>Power Aimant</b> : attire la nourriture</li>
         </ul>
@@ -116,7 +143,17 @@
         <h3>🦈 Danger</h3>
         <p>
           À partir du niveau 4, un boss te poursuit.
-          Évite-le ou tu perdras du temps !
+          Évite-le ou tu perdras du temps (ou santé en Endless) !
+        </p>
+
+        <h3>🎮 Modes de jeu</h3>
+        <ul>
+          <li><b>Normal</b> : Mode classique avec niveaux progressifs et limite de temps (30s initial). Atteins l'objectif pour passer au niveau suivant.</li>
+          <li><b>Endless</b> : Survie infinie avec barre de santé (100 PV). Les malus et le boss réduisent la santé. Pas de limite de temps, mais perte si santé = 0.</li>
+          <li><b>Time Attack</b> : 60 secondes pour maximiser le score. Victoire à la fin du chrono avec ton score total.</li>
+        </ul>
+        <p>
+          Classements locaux sauvegardés pour chaque mode !
         </p>
       </div>
 
@@ -134,9 +171,6 @@
           <div class="stat"><span>Meilleur combo</span><b id="stMaxCombo">x1</b></div>
         </div>
       </div>
-
-      <!-- Flash rouge dégâts -->
-      <div id="damageFlash"></div>
 
       <!-- ✅ UPGRADES (après niveau réussi) -->
 <div id="upgrades" class="upgrades hidden">
@@ -212,9 +246,31 @@
 
       <!-- Actions -->
       <div class="actions">
+        <div id="modeSelection" class="mode-selection">
+          <h4>Choisis un mode :</h4>
+          <button id="btnNormal" class="mode-btn active">Normal</button>
+          <button id="btnEndless" class="mode-btn">Endless</button>
+          <button id="btnTimeAttack" class="mode-btn">Time Attack</button>
+        </div>
         <button id="btnPlay">Commencer</button>
         <button id="btnNext">Continuer</button>
         <button id="btnRetry" class="secondary">Rejouer</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard complet (modal) - optionnel maintenant -->
+    <div id="leaderboard" class="leaderboard hidden">
+      <div class="panel">
+        <h3>Classement 🏆</h3>
+        <div class="leaderboard-tabs">
+          <button class="leaderboard-tab active" data-mode="normal">Normal</button>
+          <button class="leaderboard-tab" data-mode="endless">Endless</button>
+          <button class="leaderboard-tab" data-mode="time_attack">Time Attack</button>
+        </div>
+        <div id="leaderboardList" class="leaderboard-list">
+          <p>Chargement...</p>
+        </div>
+        <button id="btnCloseLeaderboard" class="secondary">Fermer</button>
       </div>
     </div>
   </div>
@@ -253,7 +309,98 @@
   </div>
 </div>
 
+<!-- TUTORIAL OVERLAY -->
+<div id="tutorialOverlay" class="hidden">
+  <div class="tutorial-panel">
+    <div id="tutorialTitle">Tutoriel - Étape 1/3</div>
+    <div id="tutorialMsg">Déplace la souris pour bouger le poisson. Clique sur "Suivant" pour continuer.</div>
+    <button id="btnTutorialNext">Suivant</button>
+    <button id="btnSkipTutorial">Passer le tutoriel</button>
+  </div>
+</div>
 
-  <script src="app.js"></script>
+<!-- Tutorial guiding hand -->
+<div id="tutorialHand" class="hidden">👆</div>
+
+<!-- ÉCRAN DE CHOIX DE NOM -->
+<div id="usernameModal" class="username-modal hidden">
+  <div class="username-panel">
+    <h2 class="username-title">Bienvenue ! 👋</h2>
+    <p class="username-text">Choisis un nom d'utilisateur pour commencer</p>
+    <input id="usernameInput" type="text" placeholder="Ton nom...">
+    <button id="btnSetUsername">Continuer</button>
+    <p id="usernameError" class="username-error"></p>
+  </div>
+</div>
+
+<!-- Flash rouge dégâts -->
+<div id="damageFlash"></div>
+
+<!-- Effet de sang (overlay) -->
+<div id="bloodLayer" class="blood-layer hidden" aria-hidden="true"></div>
+
+<!-- Virtual Joystick (Mobile) -->
+<div id="joystickContainer" class="joystick-container hidden" aria-hidden="true">
+  <div id="joystickBg" class="joystick-bg"></div>
+  <div id="joystickStick" class="joystick-stick"></div>
+</div>
+
+<!-- Options Panel -->
+<div id="optionsOverlay" class="hidden">
+  <div class="options-panel">
+    <div class="options-head">
+      <h3>Options Avancées</h3>
+      <button id="btnCloseOptions" class="secondary" aria-label="Fermer">✕</button>
+    </div>
+
+    <div class="options-content">
+      <div class="option-group">
+        <label>Vitesse Boss</label>
+        <div class="slider-container">
+          <input type="range" id="bossSpeedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
+          <span id="bossSpeedValue">1.0x</span>
+        </div>
+        <small>Ajuste la vitesse du boss (0.5x à 2.0x)</small>
+      </div>
+
+      <div class="option-group">
+        <label>Temps par Niveau</label>
+        <div class="slider-container">
+          <input type="range" id="timeMultiplierSlider" min="0.5" max="2.0" step="0.1" value="1.0">
+          <span id="timeMultiplierValue">1.0x</span>
+        </div>
+        <small>Ajuste le temps initial (0.5x à 2.0x)</small>
+      </div>
+
+      <div class="option-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="parallaxToggle" checked>
+          <span>Parallaxe</span>
+        </label>
+        <small>Désactiver le parallaxe pour plus de perf</small>
+      </div>
+
+      <div class="option-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="causticsToggle" checked>
+          <span>Caustiques (Lumière)</span>
+        </label>
+        <small>Désactiver les reflets lumineux</small>
+      </div>
+
+      <div class="option-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="swimmersToggle" checked>
+          <span>Poissons Décor</span>
+        </label>
+        <small>Désactiver les poissons de fond</small>
+      </div>
+
+      <button id="btnResetOptions" class="secondary full-width">Réinitialiser par défaut</button>
+    </div>
+  </div>
+</div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>

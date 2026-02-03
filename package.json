@@ -1,0 +1,11 @@
+{
+  "name": "projet-poisson-web",
+  "version": "1.0.0",
+  "description": "GameFish",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
