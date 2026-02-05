@@ -66,13 +66,52 @@ export function setUsername(name) {
   localStorage.setItem('username', name.trim());
 }
 
+function normalizeUsername(name) {
+  return name.trim().toLowerCase();
+}
+
 export async function saveUsernameToCloud(userId, username) {
   try {
     if (!firebaseEnabled || !db) return;
-    await setDoc(doc(db, 'users', userId), { username: username }, { merge: true });
+    const usernameLower = normalizeUsername(username);
+    await setDoc(
+      doc(db, 'users', userId),
+      { username: username, usernameLower: usernameLower, usernameError: null },
+      { merge: true }
+    );
     console.log('Nom d\'utilisateur sauvegardé');
   } catch (error) {
     console.error('Erreur sauvegarde nom:', error);
+  }
+}
+
+// Réserver un nom d'utilisateur unique (case-insensitive)
+export async function reserveUsername(userId, username) {
+  try {
+    if (!firebaseEnabled || !db) return { ok: true };
+    const name = username.trim();
+    const key = normalizeUsername(name);
+    const ref = doc(db, 'usernames', key);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.userId && data.userId !== userId) {
+        return { ok: false, reason: 'taken' };
+      }
+    }
+
+    await setDoc(ref, {
+      userId: userId,
+      username: name,
+      usernameLower: key,
+      updatedAt: Date.now()
+    }, { merge: true });
+
+    return { ok: true };
+  } catch (error) {
+    console.error('Erreur reservation nom:', error);
+    return { ok: false, reason: 'error' };
   }
 }
 
@@ -80,6 +119,10 @@ export async function saveUsernameToCloud(userId, username) {
 export async function checkUsernameExists(username) {
   try {
     if (!firebaseEnabled || !db) return false;
+    const key = normalizeUsername(username);
+    const snap = await getDoc(doc(db, 'usernames', key));
+    if (snap.exists()) return true;
+
     const q = query(
       collection(db, 'users'),
       where('username', '==', username.trim())

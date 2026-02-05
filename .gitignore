@@ -1,1 +1,4 @@
 firebase.config.js
+node_modules/
+scripts/username_conflicts.json
+scripts/username_missing.json

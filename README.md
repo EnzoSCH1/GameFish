@@ -1,4 +1,4 @@
-# Sea Fish Game
+# Reef Runner
 
 Jeu web 2D en JavaScript (DOM) avec boucles d’animation temps réel, événements dynamiques et persistance locale/cloud. Projet optimisé pour desktop et mobile.
 

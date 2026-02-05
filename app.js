@@ -4,7 +4,7 @@
 // XP + upgrades = RUN ONLY (reset on lose)
 // =========================
 
-import { saveToCloud, loadFromCloud, getUserId, submitScore, getLeaderboard, getUsername, setUsername, saveUsernameToCloud, checkUsernameExists } from './firebase.js';
+import { saveToCloud, loadFromCloud, getUserId, submitScore, getLeaderboard, getUsername, setUsername, saveUsernameToCloud, reserveUsername } from './firebase.js';
 
 // ---------- DOM ----------
 const layers = [...document.querySelectorAll(".layer")];
@@ -34,6 +34,7 @@ const btnStart = document.getElementById("btnStart");
 const btnReset = document.getElementById("btnReset");
 const btnNext  = document.getElementById("btnNext");
 const btnRetry = document.getElementById("btnRetry");
+const btnDashMobile = document.getElementById("btnDashMobile");
 const topLeaderboard = document.getElementById("topLeaderboard");
 const topLeaderboardList = document.getElementById("topLeaderboardList");
 let currentLeaderboardMode = 'normal';
@@ -251,9 +252,25 @@ async function loadCloudData() {
     localStorage.setItem(LS_EQUIP_BOSS, equippedBoss);
     localStorage.setItem(LS_BEST, String(bestScore));
     console.log('Données chargées depuis le cloud');
+
+    if (cloudData.usernameError === 'duplicate') {
+      localStorage.removeItem('username');
+      showUsernameModal('Ce nom est déjà utilisé par un autre joueur. Merci d\'en choisir un nouveau pour continuer.');
+    }
   }
 }
 loadCloudData();
+
+async function syncUsernameToCloudIfMissing(){
+  const username = getUsername();
+  if (!username) return;
+  const userId = getUserId();
+  const cloudData = await loadFromCloud(userId);
+  if (!cloudData || !cloudData.username) {
+    await saveUsernameToCloud(userId, username);
+  }
+}
+syncUsernameToCloudIfMissing();
 
 // placeholders (tu remplaceras src plus tard par tes vraies images)
 const CURSOR_SKINS = [
@@ -619,6 +636,51 @@ let wasRunningBeforeHide = false;
 let wasRunningBeforeOptions = false;
 
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const inputModeParams = new URLSearchParams(window.location.search);
+const forceMobile = ["1", "true", "yes"].includes((inputModeParams.get("mobile") || "").toLowerCase());
+const forceDesktop = ["1", "true", "yes"].includes((inputModeParams.get("desktop") || "").toLowerCase());
+
+function detectCoarsePointer(){
+  if (forceDesktop) return false;
+  if (forceMobile) return true;
+  const coarse = window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(any-pointer: coarse)").matches;
+  const noHover = window.matchMedia("(hover: none)").matches || window.matchMedia("(any-hover: none)").matches;
+  const touch = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+  const smallScreen = Math.min(window.innerWidth, window.innerHeight) <= 900;
+  return coarse || (touch && (noHover || smallScreen));
+}
+
+let isCoarsePointer = detectCoarsePointer();
+document.body.classList.toggle("mobile-mode", isCoarsePointer);
+
+function updateMobileOrientationClass(){
+  const isLandscape = window.innerWidth > window.innerHeight;
+  document.body.classList.toggle("mobile-landscape", isCoarsePointer && isLandscape);
+  document.body.classList.toggle("mobile-portrait", isCoarsePointer && !isLandscape);
+}
+
+function syncMobileControls(){
+  if (!btnDashMobile) return;
+  if (isCoarsePointer) btnDashMobile.classList.remove("hidden");
+  else btnDashMobile.classList.add("hidden");
+}
+
+function refreshInputMode(){
+  const next = detectCoarsePointer();
+  if (next !== isCoarsePointer){
+    isCoarsePointer = next;
+    document.body.classList.toggle("mobile-mode", isCoarsePointer);
+    syncMobileControls();
+    setJoystickVisibility(running);
+  }
+  updateMobileOrientationClass();
+}
+
+window.addEventListener("resize", refreshInputMode);
+window.addEventListener("orientationchange", refreshInputMode);
+updateMobileOrientationClass();
+syncMobileControls();
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden){
@@ -1419,8 +1481,9 @@ function updateCursor(){
   const prevX = x;
   const prevY = y;
 
-  const targetX = joystickActive ? (window.innerWidth / 2 + joystickX * 180) : mouseX;
-  const targetY = joystickActive ? (window.innerHeight / 2 + joystickY * 180) : mouseY;
+  const joystickRange = Math.max(120, Math.min(220, Math.min(window.innerWidth, window.innerHeight) * 0.32));
+  const targetX = joystickActive ? (window.innerWidth / 2 + joystickX * joystickRange) : mouseX;
+  const targetY = joystickActive ? (window.innerHeight / 2 + joystickY * joystickRange) : mouseY;
 
   x += (targetX - x) * follow;
   y += (targetY - y) * follow;
@@ -1607,8 +1670,10 @@ function checkEat(){
           }
         }
 
-        if (entitiesEl.querySelectorAll(".food").length < 10){
-          spawnFood(22);
+        const minFood = isCoarsePointer ? 7 : 10;
+        const refillCount = isCoarsePointer ? 12 : 22;
+        if (entitiesEl.querySelectorAll(".food").length < minFood){
+          spawnFood(refillCount);
         }
         
       }
@@ -1681,13 +1746,25 @@ function initBoss(){
   bossEl.style.top  = `${bossY}px`;
 }
 
+function getBossSize(){
+  if (!isCoarsePointer) return { w: 520, h: 292 };
+  const isLandscape = window.innerWidth > window.innerHeight;
+  return isLandscape ? { w: 280, h: 158 } : { w: 320, h: 180 };
+}
+
+function getBossRadius(){
+  if (!isCoarsePointer) return bossRadius;
+  const isLandscape = window.innerWidth > window.innerHeight;
+  return isLandscape ? 70 : 78;
+}
+
 function updateBoss(dt){
   if (!bossActive) return;
 
   // boss size (match your CSS)
-  const isMobile = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
-  const bossW = isMobile ? 380 : 520;
-  const bossH = isMobile ? 213 : 292;
+  const size = getBossSize();
+  const bossW = size.w;
+  const bossH = size.h;
 
   const bossCenterX = bossX + bossW / 2;
   const bossCenterY = bossY + bossH / 2;
@@ -1745,7 +1822,8 @@ function updateBoss(dt){
   const cdy = bossCenterY - y;
   const cdist = Math.hypot(cdx, cdy);
 
-  if (cdist < bossRadius + playerRadiusBase * 0.6 && now - lastBossHitAt > 650){
+  const bossHitRadius = getBossRadius();
+  if (cdist < bossHitRadius + playerRadiusBase * 0.6 && now - lastBossHitAt > 650){
     lastBossHitAt = now;
 
     bossHits++;
@@ -1792,7 +1870,6 @@ function updateEnemies(dt){
 }
 
 // ---------- Confetti bubbles burst ----------
-const isCoarsePointer = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 const MAX_BUBBLES = prefersReducedMotion ? (isCoarsePointer ? 16 : 34) : (isCoarsePointer ? 28 : 60);
 const MAX_SWIMMERS = prefersReducedMotion ? (isCoarsePointer ? 2 : 4) : (isCoarsePointer ? 3 : 6);
 const MAX_POOL_BUBBLES = 80;
@@ -1987,6 +2064,7 @@ function showTutorial(){
   tutorialStep = 1;
   tutorialCanEat = false;
   tutorialCanDash = false;
+  document.body.classList.add("tutorial-running");
   tutorialTitle.textContent = "Tutoriel - Étape 1/3";
   tutorialMsg.textContent = "Déplace la souris pour bouger le poisson. Clique sur 'Suivant' pour continuer.";
   tutorialOverlay.classList.remove("hidden");
@@ -2047,6 +2125,7 @@ function hideTutorial(){
   tutorialMode = false;
   tutorialOverlay?.classList.add("hidden");
   tutorialHand?.classList.add("hidden");
+  document.body.classList.remove("tutorial-running");
   // Clear demo entities
   entitiesEl.innerHTML = '';
 }
@@ -2080,7 +2159,7 @@ function configureLevel(){
   entitiesEl.innerHTML = "";
   
   const foodCount = 40 + level * 2;
-  const adjustedCount = isCoarsePointer ? Math.ceil(foodCount * 0.65) : foodCount;
+  const adjustedCount = isCoarsePointer ? Math.max(12, Math.round(foodCount * 0.45)) : foodCount;
   spawnFood(adjustedCount);
 
   if (level >= 2) spawnBonus();
@@ -2368,8 +2447,18 @@ const joystickContainer = document.getElementById("joystickContainer");
 const joystickStick = document.getElementById("joystickStick");
 let joystickActive = false;
 let joystickX = 0, joystickY = 0;
-const JOYSTICK_RADIUS = 40;
-const JOYSTICK_DEADZONE = 8;
+let joystickRadius = 40;
+let joystickDeadzone = 8;
+
+function getJoystickRadius(){
+  if (!joystickContainer) return joystickRadius;
+  const size = Math.min(joystickContainer.offsetWidth, joystickContainer.offsetHeight);
+  return Math.max(26, size / 2 - 6);
+}
+
+function getJoystickDeadzone(radius){
+  return Math.max(6, radius * 0.2);
+}
 
 function setJoystickVisibility(show){
   if (isCoarsePointer){
@@ -2404,17 +2493,19 @@ function updateJoystick(px, py){
   let dx = px - cx;
   let dy = py - cy;
   const dist = Math.hypot(dx, dy);
+  const radius = getJoystickRadius();
+  const deadzone = getJoystickDeadzone(radius);
   
-  if (dist < JOYSTICK_DEADZONE){
+  if (dist < deadzone){
     joystickX = 0;
     joystickY = 0;
   } else {
-    const ratio = Math.min(1, dist / JOYSTICK_RADIUS);
+    const ratio = Math.min(1, dist / radius);
     joystickX = (dx / dist) * ratio;
     joystickY = (dy / dist) * ratio;
   }
   
-  joystickStick.style.transform = `translate(${joystickX * JOYSTICK_RADIUS}px, ${joystickY * JOYSTICK_RADIUS}px)`;
+  joystickStick.style.transform = `translate(${joystickX * radius}px, ${joystickY * radius}px)`;
 }
 
 window.addEventListener("mousemove", (e) => {
@@ -2434,7 +2525,10 @@ window.addEventListener("pointermove", (e) => {
   mouseY = e.clientY;
 }, { passive: true });
 
-const btnDashMobile = document.getElementById("btnDashMobile");
+window.addEventListener("pointerdown", (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+}, { passive: true });
 if (btnDashMobile){
   btnDashMobile.addEventListener("pointerdown", (e) => {
     e.preventDefault();
@@ -2642,7 +2736,7 @@ async function updateTopLeaderboard(mode) {
       topLeaderboardList.innerHTML = '<div class="top-leaderboard-item">Aucun score</div>';
       return;
     }
-    
+
     scores.forEach((entry, index) => {
       const item = document.createElement("div");
       let rankClass = '';
@@ -2693,7 +2787,7 @@ btnRetry.addEventListener("click", () => {
 bestEl.textContent = bestScore;
 
 // USERNAME MODAL SYSTEM
-function showUsernameModal() {
+function showUsernameModal(initialErrorText = "") {
   const modal = document.getElementById('usernameModal');
   const input = document.getElementById('usernameInput');
   const btnSet = document.getElementById('btnSetUsername');
@@ -2702,7 +2796,12 @@ function showUsernameModal() {
   modal.classList.remove('hidden');
   input.value = '';
   input.focus();
-  errorMsg.style.display = 'none';
+  if (initialErrorText) {
+    errorMsg.textContent = initialErrorText;
+    errorMsg.style.display = 'block';
+  } else {
+    errorMsg.style.display = 'none';
+  }
   
   async function submitUsername() {
     const username = input.value.trim();
@@ -2717,16 +2816,18 @@ function showUsernameModal() {
       return;
     }
     
-    // Vérifier si le nom existe déjà
-    const exists = await checkUsernameExists(username);
-    if (exists) {
-      errorMsg.textContent = 'Ce nom est déjà pris. Choisissez un autre.';
+    const userId = getUserId();
+    const reserve = await reserveUsername(userId, username);
+    if (!reserve.ok) {
+      errorMsg.textContent = reserve.reason === 'taken'
+        ? 'Ce nom est déjà pris. Choisissez un autre.'
+        : 'Impossible de reserver ce nom. Reessayez.';
       errorMsg.style.display = 'block';
       return;
     }
-    
+
     setUsername(username);
-    saveUsernameToCloud(getUserId(), username);
+    saveUsernameToCloud(userId, username);
     modal.classList.add('hidden');
     
     // Ne pas lancer le jeu, juste fermer le modal

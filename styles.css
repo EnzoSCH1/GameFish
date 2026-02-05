@@ -78,7 +78,8 @@ body{
 }
 
 /* Quand le jeu tourne, on cache le curseur normal */
-body.game-running{
+body.game-running,
+body.tutorial-running{
   cursor: none;
 }
 
@@ -283,7 +284,7 @@ body.game-running{
 }
 
 /* Cacher le curseur poisson quand le jeu n'est pas en cours */
-body:not(.game-running) #cursorWrap {
+body:not(.game-running):not(.tutorial-running) #cursorWrap {
   display: none !important;
 }
 
@@ -561,6 +562,196 @@ button:hover{ background: rgba(0,0,0,0.35); }
     font-size: 10px;
     padding: 2px 4px;
   }
+}
+
+/* Mobile sizing tweaks (driven by JS .mobile-mode) */
+body.mobile-mode .dash-mobile{
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  right: 12px;
+  bottom: 12px;
+}
+
+body.mobile-mode #dashCooldownUI{
+  height: 8px;
+  bottom: 14px;
+  width: min(420px, 82vw);
+}
+
+body.mobile-mode #metaUI{
+  bottom: 40px;
+  width: min(440px, 86vw);
+  gap: 6px;
+}
+
+body.mobile-mode #metaXPBar{
+  height: 8px;
+}
+
+body.mobile-mode #metaXPText{
+  font-size: 11px;
+}
+
+body.mobile-mode .joystick-container{
+  width: 88px;
+  height: 88px;
+  bottom: 12px;
+  left: 12px;
+}
+
+body.mobile-mode .joystick-stick{
+  width: 32px;
+  height: 32px;
+}
+
+body.mobile-mode #overlay .panel{
+  width: min(92vw, 520px);
+  padding: 10px;
+}
+
+body.mobile-mode #overlayTitle{ font-size: 15px; }
+body.mobile-mode #overlayMsg{ font-size: 0.9rem; }
+body.mobile-mode .overlay-hint{ font-size: 0.88rem; }
+
+body.mobile-mode .rules{
+  max-height: 42vh;
+  font-size: 0.86rem;
+}
+
+body.mobile-mode .upgrades-grid{ gap: 8px; }
+body.mobile-mode .upgrade-card{ padding: 10px; }
+body.mobile-mode .u-title{ font-size: 0.95rem; }
+body.mobile-mode .u-desc{ font-size: 0.85rem; }
+body.mobile-mode .u-level{ font-size: 0.82rem; }
+body.mobile-mode .u-footer{ font-size: 0.85rem; }
+
+body.mobile-mode #hud{
+  left: 8px;
+  top: 8px;
+  padding: 8px;
+  min-width: 260px;
+  font-size: 0.78rem;
+}
+
+body.mobile-mode .hud-top{
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+body.mobile-mode .hud-bottom{
+  gap: 6px;
+  margin-top: 6px;
+}
+
+body.mobile-mode button{
+  padding: 5px 7px;
+  font-size: 0.72rem;
+  border-radius: 10px;
+}
+
+body.mobile-mode .stats-grid{
+  gap: 6px;
+}
+
+body.mobile-mode .stat span{ font-size: 10px; }
+body.mobile-mode .stat b{ font-size: 12px; }
+
+body.mobile-mode .options-panel{
+  width: min(92vw, 520px);
+  padding: 12px;
+}
+
+body.mobile-mode .options-head h3{ font-size: 1rem; }
+body.mobile-mode .options-content{ font-size: 0.9rem; }
+
+body.mobile-mode #boss{
+  width: 320px;
+  height: 180px;
+}
+
+body.mobile-portrait .joystick-container{
+  width: 90px;
+  height: 90px;
+  bottom: 70px;
+}
+
+body.mobile-portrait .joystick-stick{
+  width: 34px;
+  height: 34px;
+}
+
+body.mobile-portrait #boss{
+  width: 320px;
+  height: 180px;
+}
+
+body.mobile-portrait #btnAquarium.aquarium{
+  bottom: 16px;
+  left: 12px;
+}
+
+body.mobile-portrait #btnShop.shop{
+  bottom: 16px;
+  left: 72px;
+}
+
+body.mobile-landscape .dash-mobile{
+  padding: 8px 10px;
+  font-size: 0.8rem;
+}
+
+body.mobile-landscape #metaUI{
+  bottom: 34px;
+}
+
+body.mobile-landscape #dashCooldownUI{
+  bottom: 10px;
+  height: 7px;
+}
+
+body.mobile-landscape .joystick-container{
+  width: 78px;
+  height: 78px;
+  bottom: 80px;
+}
+
+body.mobile-landscape .joystick-stick{
+  width: 28px;
+  height: 28px;
+}
+
+body.mobile-landscape #hud{
+  font-size: 0.78rem;
+}
+
+body.mobile-portrait #metaUI{
+  display: none !important;
+}
+
+body.mobile-landscape #boss{
+  width: 280px;
+  height: 158px;
+}
+
+@media (max-height: 480px) and (orientation: landscape){
+  body.mobile-mode #boss{
+    width: 280px;
+    height: 158px;
+  }
+
+  body.mobile-mode .joystick-container{
+    width: 84px;
+    height: 84px;
+  }
+
+  body.mobile-mode .joystick-stick{
+    width: 32px;
+    height: 32px;
+  }
+
+  body.mobile-mode #hud{ font-size: 0.78rem; }
+  body.mobile-mode #metaUI{ bottom: 34px; }
+  body.mobile-mode #dashCooldownUI{ bottom: 10px; }
 }
 
 @media (max-width: 600px){
