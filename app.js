@@ -688,11 +688,13 @@ document.addEventListener("visibilitychange", () => {
       wasRunningBeforeHide = true;
       running = false;
       setRunningUI(false);
+      setJoystickVisibility(false);
     }
   } else if (wasRunningBeforeHide){
     wasRunningBeforeHide = false;
     running = true;
     setRunningUI(true);
+    setJoystickVisibility(true);
     btnStart.textContent = "Pause";
     lastFrame = 0;
     bubbleLoop();
@@ -985,6 +987,7 @@ function showRules(){
   hideUpgradesBox();
   showOverlayActions();
   setRunningUI(false);
+  setJoystickVisibility(false);
 }
 
 // ---------- Overlay ----------
@@ -1043,6 +1046,7 @@ function showOverlay(title, msg, mode){
   }
 
   setRunningUI(false);
+  setJoystickVisibility(false);
 }
 
 // ---------- Rarity / Offers / Reroll ----------
@@ -1260,6 +1264,7 @@ if (btnSkipUpgrade){
     running = true;
     btnStart.textContent = "Pause";
     setRunningUI(true);
+    setJoystickVisibility(true);
     setJoystickVisibility(true);
 
     lastFrame = 0;
@@ -2699,6 +2704,7 @@ btnStart.addEventListener("click", async () => {
     running = false;
     btnStart.textContent = "Reprendre";
     setRunningUI(false);
+    setJoystickVisibility(false);
   }
 });
 
@@ -2721,6 +2727,7 @@ btnReset.addEventListener("click", () => {
   running = false;
   btnStart.textContent = "Démarrer";
   setRunningUI(false);
+  setJoystickVisibility(false);
 
   showRules();
 });
