@@ -58,12 +58,12 @@ window.__FIREBASE_CONFIG__ = {
 ## Diagramme (architecture)
 ```mermaid
 flowchart TB
-  UI["UI / HUD / Overlays"]
-  Input["Souris / Touch / Joystick"]
-  Engine["Game Loop (requestAnimationFrame)"]
-  Systems["Systems: spawns, collisions, boss, events"]
-  State["Global State (score, timer, mode, options)"]
-  Storage["Storage: localStorage + Firestore"]
+  UI["UI / HUD / Superpositions"]
+  Input["Souris / Tactile / Joystick"]
+  Engine["Boucle de jeu (requestAnimationFrame)"]
+  Systems["Systèmes : apparitions, collisions, boss, événements"]
+  State["État global (score, minuteur, mode, options)"]
+  Storage["Stockage : localStorage + Firestore"]
 
   Input --> Engine --> Systems --> State
   UI --> State
