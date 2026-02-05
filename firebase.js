@@ -4,25 +4,25 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
 
-// Configuration Firebase
-const firebaseConfig = {
-  apiKey: "REDACTED",
-  authDomain: "jeux-de-poisson.firebaseapp.com",
-  projectId: "jeux-de-poisson",
-  storageBucket: "jeux-de-poisson.firebasestorage.app",
-  messagingSenderId: "435409399747",
-  appId: "1:435409399747:web:e079389d29910db7489776",
-  measurementId: "G-D1TYS43ZR2"
-};
+// Configuration Firebase (injectée via firebase.config.js)
+const firebaseConfig = window.__FIREBASE_CONFIG__;
+const firebaseEnabled = !!(firebaseConfig && firebaseConfig.apiKey);
 
-// Initialiser Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const analytics = getAnalytics(app);
+// Initialiser Firebase (optionnel)
+let db = null;
+let analytics = null;
+if (firebaseEnabled) {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  analytics = getAnalytics(app);
+} else {
+  console.warn("Firebase désactivé: config manquante. Crée firebase.config.js depuis firebase.config.sample.js");
+}
 
 // Fonction pour sauvegarder les données
 export async function saveToCloud(userId, data) {
   try {
+    if (!firebaseEnabled || !db) return;
     await setDoc(doc(db, 'users', userId), data);
     console.log('Sauvegarde cloud réussie');
   } catch (error) {
@@ -33,6 +33,7 @@ export async function saveToCloud(userId, data) {
 // Fonction pour charger les données
 export async function loadFromCloud(userId) {
   try {
+    if (!firebaseEnabled || !db) return null;
     const docSnap = await getDoc(doc(db, 'users', userId));
     if (docSnap.exists()) {
       return docSnap.data();
@@ -67,6 +68,7 @@ export function setUsername(name) {
 
 export async function saveUsernameToCloud(userId, username) {
   try {
+    if (!firebaseEnabled || !db) return;
     await setDoc(doc(db, 'users', userId), { username: username }, { merge: true });
     console.log('Nom d\'utilisateur sauvegardé');
   } catch (error) {
@@ -77,6 +79,7 @@ export async function saveUsernameToCloud(userId, username) {
 // Vérifier si un nom d'utilisateur existe déjà
 export async function checkUsernameExists(username) {
   try {
+    if (!firebaseEnabled || !db) return false;
     const q = query(
       collection(db, 'users'),
       where('username', '==', username.trim())
@@ -92,6 +95,7 @@ export async function checkUsernameExists(username) {
 // Sauvegarder un score au classement global
 export async function submitScore(score, mode = 'normal') {
   try {
+    if (!firebaseEnabled || !db) return;
     const userId = getUserId();
     const username = getUsername();
     const timestamp = Date.now();
@@ -114,6 +118,7 @@ export async function submitScore(score, mode = 'normal') {
 // Charger le classement global (meilleur score par utilisateur par mode)
 export async function getLeaderboard(mode = 'normal', topCount = 10) {
   try {
+    if (!firebaseEnabled || !db) return [];
     const q = query(
       collection(db, 'leaderboard'),
       orderBy('score', 'desc'),
