@@ -23,7 +23,7 @@ if (firebaseEnabled) {
 export async function saveToCloud(userId, data) {
   try {
     if (!firebaseEnabled || !db) return;
-    await setDoc(doc(db, 'users', userId), data);
+    await setDoc(doc(db, 'users', userId), data, { merge: true });
     console.log('Sauvegarde cloud réussie');
   } catch (error) {
     console.error('Erreur sauvegarde:', error);
