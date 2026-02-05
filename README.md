@@ -58,12 +58,12 @@ window.__FIREBASE_CONFIG__ = {
 ## Diagramme (architecture)
 ```mermaid
 flowchart TB
-  UI[UI / HUD / Overlays]
-  Input[Souris / Touch / Joystick]
-  Engine[Game Loop (requestAnimationFrame)]
-  Systems[Systems: spawn, collisions, boss, events]
-  State[Global State (score, timer, mode, options)]
-  Storage[Storage: localStorage + Firestore]
+  UI["UI / HUD / Overlays"]
+  Input["Souris / Touch / Joystick"]
+  Engine["Game Loop (requestAnimationFrame)"]
+  Systems["Systems: spawns, collisions, boss, events"]
+  State["Global State (score, timer, mode, options)"]
+  Storage["Storage: localStorage + Firestore"]
 
   Input --> Engine --> Systems --> State
   UI --> State
@@ -75,19 +75,19 @@ flowchart TB
 ## Schéma d’événement (runtime)
 ```mermaid
 sequenceDiagram
-  participant Loop as Game Loop
-  participant RNG as Event RNG
+  participant MainLoop as GameLoop
+  participant RNG as EventRNG
   participant State as State
-  participant UI as UI/Overlay
+  participant UI as UI
   participant FX as Effects
 
-  Loop->>RNG: tick()
-  RNG-->>Loop: eventType?
-  Loop->>State: startEvent(type)
+  MainLoop->>RNG: tick()
+  RNG-->>MainLoop: eventType
+  MainLoop->>State: startEvent(type)
   State->>FX: applyEffects(type)
   State->>UI: showNotification(type)
-  Loop->>State: updateEventTimer(dt)
-  State-->>Loop: endEvent when timer=0
+  MainLoop->>State: updateEventTimer(dt)
+  State-->>MainLoop: endEvent when timer=0
   State->>FX: clearEffects()
   State->>UI: hideNotification()
 ```
